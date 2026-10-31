@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = "http://localhost:5000/congThuc";
+const API_URL = "https://qlbnuoc.onrender.com/congThuc";
 
 export default function QLCongThuc({ ingredients }) {
   const [recipes, setRecipes] = useState([]);
@@ -27,7 +27,6 @@ export default function QLCongThuc({ ingredients }) {
       return;
     }
 
-    // So sánh linh hoạt cả kiểu chuỗi và số để tránh lệch kiểu dữ liệu từ json-server
     const ing = ingredients.find(i => String(i.id) === String(selectedIngId));
     if (!ing) {
       alert('Không tìm thấy nguyên liệu trong kho!');
