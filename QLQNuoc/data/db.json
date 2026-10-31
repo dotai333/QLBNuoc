@@ -1,0 +1,116 @@
+{
+  "congThuc": [
+    {
+      "id": "101",
+      "name": "Cà phê sữa",
+      "ingredients": [
+        {
+          "id": 1,
+          "name": "Cà phê số 1 (gram)",
+          "amount": 18
+        },
+        {
+          "id": 3,
+          "name": "Sữa đặc (ml)",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "id": "102",
+      "name": "Bạc xỉu",
+      "ingredients": [
+        {
+          "id": 1,
+          "name": "Cà phê số 1 (gram)",
+          "amount": 18
+        },
+        {
+          "id": 3,
+          "name": "Sữa đặc (ml)",
+          "amount": 30
+        },
+        {
+          "id": 4,
+          "name": "Sữa tươi (ml)",
+          "amount": 70
+        }
+      ]
+    },
+    {
+      "name": "Cà phê đen",
+      "ingredients": [
+        {
+          "id": 1793469016292,
+          "name": "Đường (ml)",
+          "amount": 10
+        },
+        {
+          "id": "1",
+          "name": "Cà phê số 1 (gram)",
+          "amount": 18
+        }
+      ],
+      "id": "4CELBNHW4Ak"
+    },
+    {
+      "name": "Cà phê sữa tươi",
+      "ingredients": [
+        {
+          "id": "1",
+          "name": "Cà phê số 1 (gram)",
+          "amount": 18
+        },
+        {
+          "id": "4",
+          "name": "Sữa tươi (ml)",
+          "amount": 70
+        },
+        {
+          "id": 1793469016292,
+          "name": "Đường (ml)",
+          "amount": 20
+        }
+      ],
+      "id": "xptKP3k0P8o"
+    }
+  ],
+  "nguyenLieu": [
+    {
+      "id": "1",
+      "name": "Cà phê số 1 (gram)",
+      "stock": 1000
+    },
+    {
+      "id": "2",
+      "name": "Cà phê số 2 (gram)",
+      "stock": 1000
+    },
+    {
+      "id": "3",
+      "name": "Sữa đặc (ml)",
+      "stock": 2000
+    },
+    {
+      "id": "4",
+      "name": "Sữa tươi (ml)",
+      "stock": 2000
+    },
+    {
+      "id": "5",
+      "name": "Muối hồng (gram)",
+      "stock": 500
+    },
+    {
+      "id": "6",
+      "name": "Kem béo rich (ml)",
+      "stock": 1000
+    }
+  ],
+  "soLieu": [
+  ],
+  "scripts": {
+  "start": "json-server --watch db.json --port 10000"
+},
+  "$schema": "./node_modules/json-server/schema.json"
+}
