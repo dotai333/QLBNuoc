@@ -30,7 +30,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients }) {
   const fetchDayData = async (dateStr) => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5000/soLieu`);
+      const res = await axios.get(`https://qlbnuoc.onrender.com/soLieu`);
       const list = res.data || [];
       const found = list.find(item => String(item.id) === String(dateStr) || String(item.date) === String(dateStr));
       
@@ -89,7 +89,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients }) {
 
   const handleSaveToWarehouse = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/soLieu`);
+      const res = await axios.get(`https://qlbnuoc.onrender.com/soLieu`);
       const list = res.data || [];
       const found = list.find(item => String(item.id) === String(selectedDate) || String(item.date) === String(selectedDate));
 
@@ -100,15 +100,15 @@ export default function QLNguyenLieu({ ingredients, setIngredients }) {
       };
 
       if (found) {
-        await axios.put(`http://localhost:5000/soLieu/${found.id}`, payload);
+        await axios.put(`https://qlbnuoc.onrender.com/soLieu/${found.id}`, payload);
       } else {
-        await axios.post(`http://localhost:5000/soLieu`, payload);
+        await axios.post(`https://qlbnuoc.onrender.com/soLieu`, payload);
       }
 
       setNotification('✅ Đã lưu / cập nhật số liệu kho ngày ' + selectedDate + ' thành công!');
     } catch (error) {
       console.error("Lỗi lưu kho:", error);
-      setNotification('❌ Lưu thất bại, kiểm tra lại json-server!');
+      setNotification('❌ Lưu thất bại, kiểm tra lại json-server trên Render!');
     }
   };
 
@@ -118,12 +118,12 @@ export default function QLNguyenLieu({ ingredients, setIngredients }) {
     }
 
     try {
-      const res = await axios.get(`http://localhost:5000/soLieu`);
+      const res = await axios.get(`https://qlbnuoc.onrender.com/soLieu`);
       const list = res.data || [];
       const found = list.find(item => String(item.id) === String(selectedDate) || String(item.date) === String(selectedDate));
 
       if (found) {
-        await axios.delete(`http://localhost:5000/soLieu/${found.id}`);
+        await axios.delete(`https://qlbnuoc.onrender.com/soLieu/${found.id}`);
       }
       setTempDayData({});
       setNotification('🗑️ Đã xóa dữ liệu ngày ' + selectedDate);
@@ -141,7 +141,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients }) {
   };
 
   if (loading) {
-    return <div className="coffee-card" style={{ color: '#d7ccc8', textAlign: 'center', padding: '40px' }}>⏳ Đang tải dữ liệu kho...</div>;
+    return <div className="coffee-card" style={{ color: '#d7ccc8', textAlign: 'center', padding: '40px' }}>⏳ Đang tải dữ liệu kho từ Render...</div>;
   }
 
   return (

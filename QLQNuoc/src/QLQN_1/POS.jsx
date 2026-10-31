@@ -57,8 +57,8 @@ export default function POS({ recipes, ingredients }) {
         const todayStr = new Date().toISOString().split('T')[0];
 
         try {
-            // 1. Tải dữ liệu ngày hôm nay từ json-server lên trước
-            const res = await axios.get(`http://localhost:5000/soLieu`);
+            // 1. Tải dữ liệu ngày hôm nay từ Render server lên trước
+            const res = await axios.get(`https://qlbnuoc.onrender.com/soLieu`);
             const list = res.data || [];
             const found = list.find(item => String(item.id) === String(todayStr) || String(item.date) === String(todayStr));
 
@@ -81,11 +81,11 @@ export default function POS({ recipes, ingredients }) {
                 data: updatedDayData
             };
 
-            // 3. Ghi đè hoặc tạo mới lên json-server
+            // 3. Ghi đè hoặc tạo mới lên Render server
             if (found) {
-                await axios.put(`http://localhost:5000/soLieu/${found.id}`, payload);
+                await axios.put(`https://qlbnuoc.onrender.com/soLieu/${found.id}`, payload);
             } else {
-                await axios.post(`http://localhost:5000/soLieu`, payload);
+                await axios.post(`https://qlbnuoc.onrender.com/soLieu`, payload);
             }
 
             setNotification('✅ Đã gửi báo cáo bán hàng & trừ kho thành công!');
@@ -93,7 +93,7 @@ export default function POS({ recipes, ingredients }) {
             setDailySales({});
         } catch (error) {
             console.error("Lỗi trừ kho POS:", error);
-            alert("Gửi báo cáo thất bại, kiểm tra lại json-server!");
+            alert("Gửi báo cáo thất bại, kiểm tra lại kết nối mạng!");
         }
     };
 
