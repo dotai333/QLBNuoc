@@ -511,3 +511,39 @@ input, select, button {
     justify-content: flex-end;
   }
 }
+/* --- Style riêng cho nút Xuất Báo Cáo Excel --- */
+.btn-excel {
+  padding: 12px 24px;
+  background-color: #2e7d32; /* Màu xanh lá chuẩn Excel */
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-excel:hover {
+  background-color: #1b5e20;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
+}
+
+.btn-excel:active {
+  transform: translateY(0);
+}
+
+/* Nút tự giãn full 100% chiều rộng trên màn hình điện thoại */
+@media (max-width: 768px) {
+  .btn-excel {
+    width: 100%;
+    padding: 14px;
+    font-size: 13px;
+  }
+}
