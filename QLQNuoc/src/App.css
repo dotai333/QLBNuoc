@@ -1,10 +1,10 @@
-/* --- Tổng thể phong cách Cà phê Tối giản & Thanh lịch --- */
+/* --- Tổng thể phong cách Nâu pha Kem Latte Thanh lịch --- */
 body {
   margin: 0;
   padding: 0;
-  background-color: #221A16; /* Nâu cà phê rang trầm ấm */
+  background-color: #2c221e; /* Nâu cà phê sữa trầm vừa, không bị tối quá */
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #F3EFEA; /* Màu chữ kem sữa sáng, dịu mắt */
+  color: #f7f3ef; /* Chữ màu kem sáng cực kỳ dịu mắt */
   box-sizing: border-box;
 }
 
@@ -25,14 +25,14 @@ input, select, button {
 }
 
 .navbar {
-  background: #2D221C; /* Nâu chocolate sữa đậm vừa */
-  color: #F3EFEA;
+  background: #382c26; /* Nâu latte sáng ấm */
+  color: #f7f3ef;
   padding: 16px 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #42342C;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  border-bottom: 2px solid #524137;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
 }
 
 .navbar-brand {
@@ -41,7 +41,7 @@ input, select, button {
   gap: 12px;
   font-size: 18px;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  color: #f7f3ef;
 }
 
 .navbar-menu {
@@ -56,7 +56,7 @@ input, select, button {
   width: 100%;
 }
 
-/* --- Nút điều hướng Navbar (Vibe Cà phê) --- */
+/* --- Nút điều hướng Navbar --- */
 .nav-btn {
   padding: 10px 20px;
   border-radius: 8px;
@@ -68,39 +68,39 @@ input, select, button {
 }
 
 .nav-btn.active {
-  background: #D4A373; /* Màu caramel sữa cực sang */
-  color: #221A16;
+  background: #e6ccb2; /* Màu kem sữa nổi bật */
+  color: #2c221e;       /* Chữ nâu đậm tương phản hoàn hảo */
   border: none;
-  box-shadow: 0 2px 8px rgba(212, 163, 115, 0.3);
+  box-shadow: 0 2px 10px rgba(230, 204, 178, 0.4);
 }
 
 .nav-btn.inactive {
   background: transparent;
-  color: #D6CCC2;
-  border: 1px solid #4E3D33;
+  color: #d8c3a5;
+  border: 1px solid #6b5344;
 }
 
 .nav-btn.inactive:hover {
-  background: #3B2D26;
-  color: #FFF;
+  background: #463830;
+  color: #fff;
 }
 
 /* --- Khung Component Chung (Card) --- */
 .coffee-card {
-  background: #2C221E; /* Nâu latte đậm thanh lịch */
+  background: #332822; /* Nâu kem Latte cho khung chính */
   padding: 30px;
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  border: 1px solid #43332B;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  border: 1px solid #524137;
   width: 100%;
   overflow-x: hidden;
 }
 
 .card-title {
   margin-top: 0;
-  color: #F3EFEA;
+  color: #f7f3ef;
   font-size: 20px;
-  border-bottom: 2px solid #43332B;
+  border-bottom: 2px solid #524137;
   padding-bottom: 12px;
   display: flex;
   justify-content: space-between;
@@ -110,10 +110,10 @@ input, select, button {
 /* --- Form & Input --- */
 .coffee-form {
   margin-bottom: 25px;
-  background: #251C18; /* Nâu tối nền form nhẹ nhàng */
+  background: #2a1f1a; /* Nâu trầm nhẹ cho vùng form con */
   padding: 20px;
   border-radius: 12px;
-  border: 1px solid #3E2F27;
+  border: 1px solid #4a3a31;
 }
 
 .form-group {
@@ -124,7 +124,7 @@ input, select, button {
   display: block;
   margin-bottom: 6px;
   font-weight: 600;
-  color: #D6CCC2;
+  color: #e6ccb2; /* Tên nhãn màu kem ấm */
   font-size: 14px;
 }
 
@@ -135,23 +135,23 @@ input, select, button {
 
 .coffee-input, .coffee-select {
   padding: 10px 14px;
-  border: 1px solid #4E3D33;
+  border: 1px solid #6b5344;
   border-radius: 8px;
   font-size: 14px;
-  background: #1C1512; /* Nâu trầm cho ô input */
-  color: #F3EFEA;
+  background: #221915;
+  color: #f7f3ef;
   width: 100%;
 }
 
 .coffee-input:focus, .coffee-select:focus {
-  border-color: #D4A373; /* Viền sáng màu caramel khi click */
+  border-color: #e6ccb2; /* Viền sáng màu kem khi bấm vào */
 }
 
 /* --- Buttons --- */
 .btn-primary {
   padding: 10px 20px;
-  background: #A98467; /* Màu nâu gỗ sáng */
-  color: white;
+  background: #b08968; /* Nâu gỗ caramel sáng */
+  color: #fff;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -161,11 +161,11 @@ input, select, button {
 }
 
 .btn-primary:hover {
-  background: #8C6D53;
+  background: #9c7553;
 }
 
 .btn-cyan {
-  background: #6B705C; /* Xanh olive trầm nhẹ nhàng */
+  background: #7f5539;
   color: white;
   border: none;
   border-radius: 8px;
@@ -175,7 +175,7 @@ input, select, button {
 }
 
 .btn-danger {
-  background: #B05753; /* Đỏ đất trầm, không bị chói */
+  background: #9b2226;
   color: white;
   border: none;
   border-radius: 6px;
@@ -185,29 +185,20 @@ input, select, button {
 }
 
 /* --- Bảng & Danh sách Kho --- */
-.item-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .section-heading {
-  color: #E6CCB2;
+  color: #e6ccb2;
   font-size: 17px;
   margin-top: 25px;
   margin-bottom: 15px;
 }
 
-/* --- Nút Xuất Báo Cáo Excel (Màu xanh lá mẫu của mày) --- */
+/* --- Nút Xuất Báo Cáo Excel (Giữ nguyên màu xanh chuẩn đẹp) --- */
 .btn-excel {
   width: 100%;
   max-width: 320px;
   padding: 14px 20px;
-  background-color: #1B6B39; /* Xanh lá chuẩn mẫu mày thích */
-  color: #FFFFFF;
+  background-color: #1b6b39;
+  color: #ffffff;
   border: none;
   border-radius: 10px;
   font-size: 15px;
@@ -222,7 +213,7 @@ input, select, button {
 }
 
 .btn-excel:hover {
-  background-color: #14532D;
+  background-color: #14532d;
   transform: translateY(-2px);
 }
 
