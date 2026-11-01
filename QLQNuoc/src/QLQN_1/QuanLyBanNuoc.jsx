@@ -4,6 +4,7 @@ import POS from './POS';
 import QLCongThuc from './QLCongThuc';
 import QLNguyenLieu from './QLNguyenLieu';
 import '../App.css';
+import * as XLSX from 'xlsx';
 
 export default function QuanLyQuanNuoc() {
   const [recipes, setRecipes] = useState([]);

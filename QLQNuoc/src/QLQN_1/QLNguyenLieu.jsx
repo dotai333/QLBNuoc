@@ -1,277 +1,222 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 
-export default function QLNguyenLieu({ ingredients, setIngredients }) {
-  // Hàm lấy đúng ngày hiện tại theo giờ Việt Nam (tránh lệch UTC)
-  const getTodayLocalDateStr = () => {
-    const now = new Date();
-    const offsetMs = now.getTimezoneOffset() * 60 * 1000;
-    const localDate = new Date(now.getTime() - offsetMs);
-    return localDate.toISOString().split('T')[0];
+export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehouse, saveDailyWarehouseToServer }) {
+  // Lấy ngày hiện tại định dạng YYYY-MM-DD làm mặc định
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [newIngName, setNewIngName] = useState('');
+  const [newIngBase, setNewIngBase] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editBase, setEditBase] = useState('');
+
+  // Lấy dữ liệu kho của ngày đang chọn
+  const currentDayData = dailyWarehouse[selectedDate] || {};
+
+  // Hàm thay đổi số lượng ly bán/nhập trong ngày
+  const handleAmountChange = (ingId, field, value) => {
+    const currentData = currentDayData[ingId] || { startAmount: '', usedAmount: '' };
+    const updatedIngData = {
+      ...currentData,
+      [field]: value === '' ? '' : Number(value)
+    };
+
+    const updatedDayData = {
+      ...currentDayData,
+      [ingId]: updatedIngData
+    };
+
+    saveDailyWarehouseToServer(selectedDate, updatedDayData);
   };
 
-  const [selectedDate, setSelectedDate] = useState(getTodayLocalDateStr());
+  // Thêm nguyên liệu mới vào danh sách chung
+  const handleAddIngredient = (e) => {
+    e.preventDefault();
+    if (!newIngName.trim()) return;
 
-  const [tempDayData, setTempDayData] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [notification, setNotification] = useState('');
+    const newObj = {
+      id: Date.now().toString(),
+      name: newIngName.trim(),
+      baseStock: Number(newIngBase) || 0
+    };
 
-  const [newIngName, setNewIngName] = useState('');
-  const [newIngStock, setNewIngStock] = useState('');
+    const updated = [...ingredients, newObj];
+    setIngredients(updated);
+    setNewIngName('');
+    setNewIngBase('');
+  };
 
-  const [editingId, setEditingId] = useState(null);
-  const [editName, setEditName] = useState('');
-  const [editStock, setEditStock] = useState('');
-
-  useEffect(() => {
-    fetchDayData(selectedDate);
-  }, [selectedDate]);
-
-  const fetchDayData = async (dateStr) => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`https://qlbnuoc.onrender.com/soLieu`);
-      const list = res.data || [];
-      const found = list.find(item => String(item.id) === String(dateStr) || String(item.date) === String(dateStr));
-      
-      if (found) {
-        setTempDayData(found.data || {});
-      } else {
-        setTempDayData({});
-      }
-    } catch (error) {
-      setTempDayData({});
-    } finally {
-      setLoading(false);
+  // Xóa nguyên liệu
+  const handleDeleteIngredient = (id) => {
+    if (window.confirm("Mày có chắc muốn xóa nguyên liệu này không?")) {
+      const updated = ingredients.filter(item => item.id !== id);
+      setIngredients(updated);
     }
   };
 
-  const handleAddIngredient = (e) => {
-    e.preventDefault();
-    if (!newIngName || !newIngStock) return;
-    
-    const newItem = {
-      id: Date.now(),
-      name: newIngName,
-      stock: Number(newIngStock)
-    };
-    
-    setIngredients([...ingredients, newItem]);
-    setNewIngName('');
-    setNewIngStock('');
-  };
-
-  const handleStartEdit = (item) => {
-    setEditingId(item.id);
-    setEditName(item.name);
-    setEditStock(item.stock);
-  };
-
+  // Lưu chỉnh sửa cơ bản nguyên liệu
   const handleSaveEdit = (id) => {
-    if (!editName) return;
-    setIngredients(ingredients.map(item => 
-      item.id === id ? { ...item, name: editName, stock: Number(editStock) } : item
-    ));
+    const updated = ingredients.map(item => {
+      if (item.id === id) {
+        return { ...item, baseStock: Number(editBase) || 0 };
+      }
+      return item;
+    });
+    setIngredients(updated);
     setEditingId(null);
   };
 
-  const handleOpeningChangeLocally = (ingId, value) => {
-    const val = Math.max(0, Number(value));
-    setTempDayData(prev => ({
-      ...prev,
-      [ingId]: {
-        ...prev[ingId],
-        opening: val
-      }
-    }));
-    setNotification('');
-  };
+  // =========================================================
+  // --- TÍNH NĂNG XUẤT BÁO CÁO KHO RA FILE EXCEL (.XLSX) ---
+  // =========================================================
+  const handleExportExcel = () => {
+    // Chuẩn bị dữ liệu từ bảng kho ngày hiện tại
+    const dataToExport = ingredients.map((item) => {
+      const itemData = currentDayData[item.id] || { startAmount: 0, usedAmount: 0 };
+      const start = Number(itemData.startAmount) || 0;
+      const used = Number(itemData.usedAmount) || 0;
+      const end = start - used;
 
-  const handleSaveToWarehouse = async () => {
-    try {
-      const res = await axios.get(`https://qlbnuoc.onrender.com/soLieu`);
-      const list = res.data || [];
-      const found = list.find(item => String(item.id) === String(selectedDate) || String(item.date) === String(selectedDate));
-
-      const payload = {
-        id: selectedDate,
-        date: selectedDate,
-        data: tempDayData
+      return {
+        "Tên Nguyên Liệu": item.name,
+        "Đầu Ngày": start,
+        "Đã Dùng (POS)": used,
+        "Cuối Ngày": end,
       };
+    });
 
-      if (found) {
-        await axios.put(`https://qlbnuoc.onrender.com/soLieu/${found.id}`, payload);
-      } else {
-        await axios.post(`https://qlbnuoc.onrender.com/soLieu`, payload);
-      }
+    // Tạo file excel qua thư viện xlsx
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Bao Cao Kho");
 
-      setNotification('✅ Đã lưu / cập nhật số liệu kho ngày ' + selectedDate + ' thành công!');
-    } catch (error) {
-      console.error("Lỗi lưu kho:", error);
-      setNotification('❌ Lưu thất bại, kiểm tra lại json-server trên Render!');
-    }
+    // Tên file tải về theo đúng ngày chọn (VD: Bao_Cao_Kho_2026-11-01.xlsx)
+    const fileName = `Bao_Cao_Kho_${selectedDate}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
-
-  const handleDeleteDayData = async () => {
-    if (!window.confirm(`⚠️ Bạn có chắc chắn muốn xóa và reset toàn bộ dữ liệu của ngày ${selectedDate} về 0 không?`)) {
-      return;
-    }
-
-    try {
-      const res = await axios.get(`https://qlbnuoc.onrender.com/soLieu`);
-      const list = res.data || [];
-      const found = list.find(item => String(item.id) === String(selectedDate) || String(item.date) === String(selectedDate));
-
-      if (found) {
-        await axios.delete(`https://qlbnuoc.onrender.com/soLieu/${found.id}`);
-      }
-      setTempDayData({});
-      setNotification('🗑️ Đã xóa dữ liệu ngày ' + selectedDate);
-    } catch (error) {
-      console.log("Lỗi khi xóa dữ liệu ngày:", error);
-      setTempDayData({});
-    }
-  };
-
-  const getIngredientDataById = (id) => {
-    const dayRecord = tempDayData[id] || {};
-    const opening = dayRecord.opening !== undefined ? dayRecord.opening : 0;
-    const used = dayRecord.used || 0;
-    return { opening, used, closing: opening - used };
-  };
-
-  if (loading) {
-    return <div className="coffee-card" style={{ color: '#d7ccc8', textAlign: 'center', padding: '40px' }}>⏳ Đang tải dữ liệu kho từ Render...</div>;
-  }
 
   return (
     <div className="coffee-card">
-      <h3 className="card-title">📦 Quản Lý Kho Nguyên Liệu</h3>
+      <h2 className="card-title">📦 Quản Lý Kho Nguyên Liệu</h2>
 
-      {notification && (
-        <div className={notification.startsWith('✅') ? "notification-success" : "notification-error"} style={{ marginBottom: '15px' }}>
-          {notification}
+      {/* Chọn ngày kiểm kho */}
+      <div className="coffee-form">
+        <label className="form-label">📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
+        <input 
+          type="date" 
+          className="coffee-input input-full"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+        />
+      </div>
+
+      {/* Thêm nguyên liệu mới */}
+      <form onSubmit={handleAddIngredient} className="coffee-form">
+        <label className="form-label">➕ Thêm Nguyên Liệu Mới</label>
+        <div className="form-row">
+          <input 
+            type="text" 
+            placeholder="Tên nguyên liệu (VD: Sữa tươi)"
+            className="coffee-input input-flex-2"
+            value={newIngName}
+            onChange={(e) => setNewIngName(e.target.value)}
+          />
+          <input 
+            type="number" 
+            placeholder="Tồn kho cơ bản"
+            className="coffee-input input-flex-1"
+            value={newIngBase}
+            onChange={(e) => setNewIngBase(e.target.value)}
+          />
+          <button type="submit" className="btn-primary">Thêm</button>
+        </div>
+      </form>
+
+      {/* Bảng cân đối kho ngày */}
+      <h3 className="section-heading">📋 Bảng Cân Đối Kho Ngày: <span style={{ color: '#ffb74d' }}>{selectedDate}</span></h3>
+
+      {ingredients.length === 0 ? (
+        <p className="empty-text">Chưa có nguyên liệu nào trong kho.</p>
+      ) : (
+        <div className="table-responsive">
+          <div style={{ minWidth: '600px' }}>
+            {/* Header bảng */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', padding: '10px 14px', background: '#1e1816', borderRadius: '8px', fontWeight: 'bold', color: '#d7ccc8', marginBottom: '10px' }}>
+              <div>Tên Nguyên Liệu</div>
+              <div style={{ textAlign: 'center' }}>Đầu Ngày</div>
+              <div style={{ textAlign: 'center' }}>Đã Dùng (POS)</div>
+              <div style={{ textAlign: 'center' }}>Cuối Ngày</div>
+              <div style={{ textAlign: 'right' }}>Thao Tác</div>
+            </div>
+
+            {/* Danh sách nguyên liệu trong bảng */}
+            <div className="item-list">
+              {ingredients.map((item) => {
+                const itemData = currentDayData[item.id] || { startAmount: '', usedAmount: '' };
+                const start = itemData.startAmount !== '' ? Number(itemData.startAmount) : 0;
+                const used = itemData.usedAmount !== '' ? Number(itemData.usedAmount) : 0;
+                const end = start - used;
+
+                return (
+                  <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', alignItems: 'center', background: '#1e1816', border: '1px solid #382e2a', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px' }}>
+                    
+                    {/* Tên nguyên liệu */}
+                    <div>
+                      <span className="item-title-bold" style={{ margin: 0 }}>{item.name}</span>
+                    </div>
+
+                    {/* Ô nhập Đầu Ngày */}
+                    <div style={{ textAlign: 'center' }}>
+                      <input 
+                        type="number"
+                        className="coffee-input"
+                        style={{ textAlign: 'center', padding: '6px' }}
+                        value={itemData.startAmount !== undefined ? itemData.startAmount : ''}
+                        onChange={(e) => handleAmountChange(item.id, 'startAmount', e.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
+
+                    {/* Đã Dùng (POS) - Tự động tính từ bán hàng */}
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#ff8a80' }}>
+                      {used}
+                    </div>
+
+                    {/* Cuối Ngày (Đầu ngày - Đã dùng) */}
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#69f0ae' }}>
+                      {end}
+                    </div>
+
+                    {/* Nút thao tác xóa / sửa */}
+                    <div style={{ textAlign: 'right', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                      {editingId === item.id ? (
+                        <>
+                          <button className="btn-cyan" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleSaveEdit(item.id)}>Lưu</button>
+                          <button className="btn-danger" onClick={() => setEditingId(null)}>Hủy</button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="btn-info" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => { setEditingId(item.id); setEditBase(item.baseStock); }}>Sửa</button>
+                          <button className="btn-danger" onClick={() => handleDeleteIngredient(item.id)}>Xóa</button>
+                        </>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="coffee-form" style={{ background: '#2d2422', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <label className="form-label" style={{ fontWeight: 'bold', color: '#d7ccc8', margin: 0 }}>
-            📅 Chọn Ngày Kiểm Kho / Chốt Ca:
-          </label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button 
-              type="button" 
-              onClick={handleSaveToWarehouse}
-              style={{ background: '#388e3c', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
-            >
-              💾 Lưu / Cập Nhật Kho
-            </button>
-            <button 
-              type="button" 
-              onClick={handleDeleteDayData}
-              style={{ background: '#d32f2f', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}
-            >
-              🗑️ Xóa Dữ Liệu
-            </button>
-          </div>
-        </div>
-        <input 
-          type="date" 
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="coffee-input input-full"
-          style={{ cursor: 'pointer' }}
-        />
+      {/* --- NÚT XUẤT BÁO CÁO EXCEL ĐẶT Ở DƯỚI CÙNG BẢNG --- */}
+      <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'flex-end' }}>
+        <button className="btn-excel" onClick={handleExportExcel}>
+          📊 Gửi / Tải Báo Cáo Nguyên Liệu (Excel)
+        </button>
       </div>
-      
-      <form onSubmit={handleAddIngredient} className="coffee-form form-row" style={{ marginBottom: '20px' }}>
-        <input 
-          type="text" 
-          placeholder="Tên nguyên liệu mới (VD: Sữa tươi)" 
-          value={newIngName}
-          onChange={(e) => setNewIngName(e.target.value)}
-          className="coffee-input input-flex-2"
-        />
-        <input 
-          type="number" 
-          placeholder="Tồn kho cơ bản" 
-          value={newIngStock}
-          onChange={(e) => setNewIngStock(e.target.value)}
-          className="coffee-input input-flex-1"
-        />
-        <button type="submit" className="btn-primary">Thêm</button>
-      </form>
 
-      <h4 className="section-heading">📋 Bảng Cân Đối Kho Ngày: <span style={{ color: '#ff8a80' }}>{selectedDate}</span></h4>
-      
-      <div style={{ background: '#1e1614', padding: '12px', borderRadius: '8px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1fr 1fr', gap: '8px', color: '#a1887f', fontWeight: 'bold', paddingBottom: '10px', borderBottom: '1px solid #3e2723', fontSize: '13px', textAlign: 'center' }}>
-          <div style={{ textAlign: 'left' }}>Tên Nguyên Liệu</div>
-          <div>Đầu Ngày</div>
-          <div>Đã Dùng (POS)</div>
-          <div>Cuối Ngày</div>
-          <div>Thao Tác</div>
-        </div>
-
-        <ul className="item-list" style={{ marginTop: '10px' }}>
-          {ingredients.map(item => {
-            const ingData = getIngredientDataById(item.id);
-            const isEditing = editingId === item.id;
-
-            return (
-              <li key={item.id} className="list-item" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1fr 1fr', gap: '8px', alignItems: 'center' }}>
-                <div>
-                  {isEditing ? (
-                    <input 
-                      type="text" 
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="coffee-input"
-                      style={{ padding: '4px', fontSize: '13px' }}
-                    />
-                  ) : (
-                    <span className="item-title" style={{ fontSize: '14px' }}>{item.name}</span>
-                  )}
-                </div>
-                
-                <div>
-                  <input 
-                    type="number" 
-                    min="0"
-                    value={ingData.opening}
-                    onChange={(e) => handleOpeningChangeLocally(item.id, e.target.value)}
-                    className="coffee-input"
-                    style={{ textAlign: 'center', padding: '6px' }}
-                  />
-                </div>
-
-                <div style={{ textAlign: 'center', color: '#ff8a80', fontWeight: 'bold' }}>
-                  -{ingData.used.toFixed(1)}
-                </div>
-
-                <div style={{ textAlign: 'center' }}>
-                  <span className="stock-badge" style={{ background: ingData.closing < 0 ? '#d32f2f' : '#388e3c', color: '#fff', padding: '5px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}>
-                    {ingData.closing.toFixed(1)}
-                  </span>
-                </div>
-
-                <div style={{ textAlign: 'center' }}>
-                  {isEditing ? (
-                    <button onClick={() => handleSaveEdit(item.id)} style={{ background: '#388e3c', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>
-                      Lưu
-                    </button>
-                  ) : (
-                    <button onClick={() => handleStartEdit(item)} style={{ background: '#ffa726', color: '#1e1614', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>
-                      Sửa
-                    </button>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
     </div>
   );
 }
