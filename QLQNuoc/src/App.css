@@ -277,3 +277,21 @@ input, select, button {
     width: 100%;
   }
 }
+.btn-save-recipe, button[type="submit"], .btn-success {
+  padding: 12px 24px;
+  background-color: #b08968; /* Tông màu nâu gỗ caramel sáng ấm */
+  color: #ffffff;            /* Chữ trắng nổi bật */
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(176, 137, 104, 0.3);
+}
+
+.btn-save-recipe:hover, button[type="submit"]:hover, .btn-success:hover {
+  background-color: #9c7553;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(176, 137, 104, 0.4);
+}
