@@ -1,10 +1,10 @@
-/* --- Tổng thể --- */
+/* --- Tổng thể phong cách Cà phê Tối giản & Thanh lịch --- */
 body {
   margin: 0;
   padding: 0;
-  background-color: #1a1614;
+  background-color: #221A16; /* Nâu cà phê rang trầm ấm */
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #f5efe6;
+  color: #F3EFEA; /* Màu chữ kem sữa sáng, dịu mắt */
   box-sizing: border-box;
 }
 
@@ -25,35 +25,28 @@ input, select, button {
 }
 
 .navbar {
-  background: #3e2723;
-  color: #fff;
+  background: #2D221C; /* Nâu chocolate sữa đậm vừa */
+  color: #F3EFEA;
   padding: 16px 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-bottom: 1px solid #42342C;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
 }
 
 .navbar-brand {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.navbar-brand span {
-  font-size: 26px;
-}
-
-.navbar-brand h2 {
-  margin: 0;
-  font-size: 20px;
-  letter-spacing: 0.5px;
+  font-size: 18px;
   font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .navbar-menu {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .main-content {
@@ -63,9 +56,9 @@ input, select, button {
   width: 100%;
 }
 
-/* --- Nút điều hướng Navbar --- */
+/* --- Nút điều hướng Navbar (Vibe Cà phê) --- */
 .nav-btn {
-  padding: 10px 22px;
+  padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
@@ -75,34 +68,39 @@ input, select, button {
 }
 
 .nav-btn.active {
-  background: #d7ccc8;
-  color: #3e2723;
+  background: #D4A373; /* Màu caramel sữa cực sang */
+  color: #221A16;
   border: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(212, 163, 115, 0.3);
 }
 
 .nav-btn.inactive {
   background: transparent;
-  color: #d7ccc8;
-  border: 1px solid #6d4c41;
+  color: #D6CCC2;
+  border: 1px solid #4E3D33;
+}
+
+.nav-btn.inactive:hover {
+  background: #3B2D26;
+  color: #FFF;
 }
 
 /* --- Khung Component Chung (Card) --- */
 .coffee-card {
-  background: #25201d;
+  background: #2C221E; /* Nâu latte đậm thanh lịch */
   padding: 30px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  border: 1px solid #382e2a;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid #43332B;
   width: 100%;
   overflow-x: hidden;
 }
 
 .card-title {
   margin-top: 0;
-  color: #f5efe6;
+  color: #F3EFEA;
   font-size: 20px;
-  border-bottom: 2px solid #382e2a;
+  border-bottom: 2px solid #43332B;
   padding-bottom: 12px;
   display: flex;
   justify-content: space-between;
@@ -112,10 +110,10 @@ input, select, button {
 /* --- Form & Input --- */
 .coffee-form {
   margin-bottom: 25px;
-  background: #1e1816;
+  background: #251C18; /* Nâu tối nền form nhẹ nhàng */
   padding: 20px;
   border-radius: 12px;
-  border: 1px solid #382e2a;
+  border: 1px solid #3E2F27;
 }
 
 .form-group {
@@ -126,7 +124,7 @@ input, select, button {
   display: block;
   margin-bottom: 6px;
   font-weight: 600;
-  color: #d7ccc8;
+  color: #D6CCC2;
   font-size: 14px;
 }
 
@@ -137,34 +135,22 @@ input, select, button {
 
 .coffee-input, .coffee-select {
   padding: 10px 14px;
-  border: 1px solid #4a3b32;
+  border: 1px solid #4E3D33;
   border-radius: 8px;
   font-size: 14px;
-  background: #2b2421;
-  color: #fff;
+  background: #1C1512; /* Nâu trầm cho ô input */
+  color: #F3EFEA;
   width: 100%;
 }
 
 .coffee-input:focus, .coffee-select:focus {
-  border-color: #8d6e63;
-}
-
-.input-flex-2 {
-  flex: 2;
-}
-
-.input-flex-1 {
-  flex: 1;
-}
-
-.input-full {
-  width: 100%;
+  border-color: #D4A373; /* Viền sáng màu caramel khi click */
 }
 
 /* --- Buttons --- */
 .btn-primary {
   padding: 10px 20px;
-  background: #8d6e63;
+  background: #A98467; /* Màu nâu gỗ sáng */
   color: white;
   border: none;
   border-radius: 8px;
@@ -175,76 +161,30 @@ input, select, button {
 }
 
 .btn-primary:hover {
-  background: #795548;
+  background: #8C6D53;
 }
 
 .btn-cyan {
-  background: #00838f;
+  background: #6B705C; /* Xanh olive trầm nhẹ nhàng */
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 10px 16px;
+  padding: 8px 14px;
   cursor: pointer;
   font-weight: 600;
-}
-
-.btn-success {
-  padding: 12px;
-  background: #2e7d32;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-  flex: 1;
-}
-
-.btn-warning {
-  padding: 12px;
-  background: #d84315;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-  flex: 1;
-}
-
-.btn-secondary {
-  padding: 12px 20px;
-  background: #616161;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.btn-info {
-  padding: 6px 14px;
-  background: #0277bd;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
 }
 
 .btn-danger {
-  background: #c62828;
+  background: #B05753; /* Đỏ đất trầm, không bị chói */
   color: white;
   border: none;
-  border-radius: 4px;
-  padding: 2px 8px;
+  border-radius: 6px;
+  padding: 6px 12px;
   cursor: pointer;
   font-size: 12px;
 }
 
-/* --- Danh sách & Item --- */
+/* --- Bảng & Danh sách Kho --- */
 .item-list {
   list-style: none;
   padding: 0;
@@ -254,178 +194,39 @@ input, select, button {
   gap: 10px;
 }
 
-.list-item {
-  background: #1e1816;
-  border: 1px solid #382e2a;
-  padding: 14px 18px;
-  border-radius: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.list-item-start {
-  align-items: flex-start;
-}
-
-.item-title {
-  font-weight: 500;
-  color: #f5efe6;
-}
-
-.item-title-bold {
-  font-size: 16px;
-  color: #f5efe6;
-  display: block;
-  margin-bottom: 6px;
-}
-
-.sub-list {
-  margin: 0;
-  padding-left: 18px;
-  color: #d7ccc8;
-  font-size: 14px;
-}
-
-.sub-list-item {
-  margin-bottom: 3px;
-}
-
-.stock-badge {
-  background: #382e2a;
-  padding: 4px 12px;
-  border-radius: 20px;
-  color: #ff8a80;
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.amount-highlight {
-  color: #ff8a80;
-  font-weight: bold;
-}
-
-.draft-box {
-  background: #2b2421;
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  border: 1px solid #4a3b32;
-}
-
-.draft-title {
-  color: #d7ccc8;
-  font-size: 13px;
-  display: block;
-  margin-bottom: 8px;
-}
-
-.badge-editing {
-  color: #ffb74d;
-  font-size: 13px;
-  background: #3e2e22;
-  padding: 4px 10px;
-  border-radius: 6px;
-}
-
-.empty-text {
-  color: #a1887f;
-  font-style: italic;
-}
-
 .section-heading {
-  color: #f5efe6;
-  font-size: 16px;
+  color: #E6CCB2;
+  font-size: 17px;
   margin-top: 25px;
   margin-bottom: 15px;
 }
 
-/* --- POS / Bán hàng --- */
-.pos-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.drink-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-}
-
-.drink-card {
-  background: #1e1816;
-  border: 1px solid #382e2a;
+/* --- Nút Xuất Báo Cáo Excel (Màu xanh lá mẫu của mày) --- */
+.btn-excel {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 20px;
+  background-color: #1B6B39; /* Xanh lá chuẩn mẫu mày thích */
+  color: #FFFFFF;
+  border: none;
   border-radius: 10px;
-  padding: 15px;
-  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-}
-
-.drink-card:hover {
-  border-color: #8d6e63;
-  transform: translateY(-2px);
-  background: #2b2421;
-}
-
-.drink-card-name {
-  font-weight: 600;
-  color: #f5efe6;
-  font-size: 15px;
-  margin-bottom: 8px;
-}
-
-.drink-card-hint {
-  font-size: 12px;
-  color: #a1887f;
-}
-
-.notification-success {
-  padding: 10px 14px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  background: #1b5e20;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.notification-error {
-  padding: 10px 14px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  background: #b71c1c;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.empty-cart-text {
-  color: #a1887f;
-  font-style: italic;
-  text-align: center;
-  margin: 40px 0;
-}
-
-.cart-list-container {
-  margin-bottom: 20px;
-  max-height: 250px;
-  overflow-y: auto;
-}
-
-.order-item-row {
+  box-shadow: 0 4px 14px rgba(27, 107, 57, 0.4);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: #1e1816;
-  padding: 10px 14px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  border: 1px solid #382e2a;
+  justify-content: center;
+  gap: 10px;
 }
 
-/* --- Khung cuộn ngang cho Bảng / Kho --- */
+.btn-excel:hover {
+  background-color: #14532D;
+  transform: translateY(-2px);
+}
+
+/* --- Khung cuộn ngang cho Bảng --- */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
@@ -433,7 +234,7 @@ input, select, button {
 }
 
 /* ========================================================= */
-/* --- TỐI ƯU GIAO DIỆN DI ĐỘNG (MOBILE RESPONSIVE < 768px) --- */
+/* --- RESPONSIVE MOBILE (< 768px) --- */
 /* ========================================================= */
 @media (max-width: 768px) {
   .navbar {
@@ -447,7 +248,6 @@ input, select, button {
     justify-content: center;
   }
 
-  /* Thanh menu trượt ngang mượt mà trên điện thoại */
   .navbar-menu {
     display: flex;
     overflow-x: auto;
@@ -476,78 +276,13 @@ input, select, button {
     border-radius: 12px;
   }
 
-  .card-title {
-    font-size: 17px;
-  }
-
-  .coffee-form {
-    padding: 12px;
-  }
-
   .form-row {
     flex-direction: column;
     gap: 8px;
   }
 
-  .pos-container {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .drink-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  .list-item {
-    padding: 12px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .list-item > div:last-child {
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
-/* --- Nút Xuất Báo Cáo Excel chuẩn màu xanh và nổi bật chữ --- */
-.btn-excel {
-  width: 100%; /* Trải rộng full khung hoặc chỉnh lại tùy ý */
-  max-width: 320px; /* Độ rộng vừa phải, cân đối */
-  padding: 14px 20px;
-  background-color: #1b6b39; /* Màu xanh lá đậm chuẩn mẫu mày gửi */
-  color: #ffffff; /* Chữ trắng sáng nổi bật tuyệt đối trên nền xanh */
-  border: none;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(27, 107, 57, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  letter-spacing: 0.3px;
-}
-
-.btn-excel:hover {
-  background-color: #14532d; /* Xanh đậm hơn chút khi rê chuột vào */
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(27, 107, 57, 0.6);
-}
-
-.btn-excel:active {
-  transform: translateY(0);
-}
-
-/* Tối ưu trên điện thoại hiển thị to rõ, dễ bấm */
-@media (max-width: 768px) {
   .btn-excel {
     max-width: 100%;
     width: 100%;
-    padding: 16px;
-    font-size: 15px;
   }
 }
