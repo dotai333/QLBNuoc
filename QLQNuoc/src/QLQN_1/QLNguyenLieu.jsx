@@ -102,8 +102,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
       {/* Chọn ngày kiểm kho */}
       <div className="coffee-form">
         <label className="form-label">📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
-        <input 
-          type="date" 
+        <input
+          type="date"
           className="coffee-input input-full"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
@@ -114,15 +114,15 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
       <form onSubmit={handleAddIngredient} className="coffee-form">
         <label className="form-label">➕ Thêm Nguyên Liệu Mới</label>
         <div className="form-row">
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Tên nguyên liệu (VD: Sữa tươi)"
             className="coffee-input input-flex-2"
             value={newIngName}
             onChange={(e) => setNewIngName(e.target.value)}
           />
-          <input 
-            type="number" 
+          <input
+            type="number"
             placeholder="Tồn kho cơ bản"
             className="coffee-input input-flex-1"
             value={newIngBase}
@@ -159,7 +159,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
                 return (
                   <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', alignItems: 'center', background: '#1e1816', border: '1px solid #382e2a', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px' }}>
-                    
+
                     {/* Tên nguyên liệu */}
                     <div>
                       <span className="item-title-bold" style={{ margin: 0 }}>{item.name}</span>
@@ -167,7 +167,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
                     {/* Ô nhập Đầu Ngày */}
                     <div style={{ textAlign: 'center' }}>
-                      <input 
+                      <input
                         type="number"
                         className="coffee-input"
                         style={{ textAlign: 'center', padding: '6px' }}
@@ -210,8 +210,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         </div>
       )}
 
-      {/* --- NÚT XUẤT BÁO CÁO EXCEL ĐẶT Ở DƯỚI CÙNG BẢNG --- */}
-      <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'flex-end' }}>
+      {/* Nút Xuất Báo Cáo Excel canh giữa nổi bật ở đáy bảng */}
+      <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'center' }}>
         <button className="btn-excel" onClick={handleExportExcel}>
           📊 Gửi / Tải Báo Cáo Nguyên Liệu (Excel)
         </button>

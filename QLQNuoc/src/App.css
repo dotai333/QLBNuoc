@@ -511,39 +511,43 @@ input, select, button {
     justify-content: flex-end;
   }
 }
-/* --- Style riêng cho nút Xuất Báo Cáo Excel --- */
+/* --- Nút Xuất Báo Cáo Excel chuẩn màu xanh và nổi bật chữ --- */
 .btn-excel {
-  padding: 12px 24px;
-  background-color: #2e7d32; /* Màu xanh lá chuẩn Excel */
-  color: #ffffff;
+  width: 100%; /* Trải rộng full khung hoặc chỉnh lại tùy ý */
+  max-width: 320px; /* Độ rộng vừa phải, cân đối */
+  padding: 14px 20px;
+  background-color: #1b6b39; /* Màu xanh lá đậm chuẩn mẫu mày gửi */
+  color: #ffffff; /* Chữ trắng sáng nổi bật tuyệt đối trên nền xanh */
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
-  display: inline-flex;
+  box-shadow: 0 4px 14px rgba(27, 107, 57, 0.4);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  letter-spacing: 0.3px;
 }
 
 .btn-excel:hover {
-  background-color: #1b5e20;
+  background-color: #14532d; /* Xanh đậm hơn chút khi rê chuột vào */
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
+  box-shadow: 0 6px 18px rgba(27, 107, 57, 0.6);
 }
 
 .btn-excel:active {
   transform: translateY(0);
 }
 
-/* Nút tự giãn full 100% chiều rộng trên màn hình điện thoại */
+/* Tối ưu trên điện thoại hiển thị to rõ, dễ bấm */
 @media (max-width: 768px) {
   .btn-excel {
+    max-width: 100%;
     width: 100%;
-    padding: 14px;
-    font-size: 13px;
+    padding: 16px;
+    font-size: 15px;
   }
 }
