@@ -65,10 +65,9 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     setEditingId(null);
   };
 
-  // 🌟 Hàm di chuyển vị trí nguyên liệu lên/xuống
   const handleMoveItem = (index, direction) => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= ingredients.length) return; // Chặn nếu vượt biên
+    if (newIndex < 0 || newIndex >= ingredients.length) return;
 
     const updated = [...ingredients];
     const temp = updated[index];
@@ -182,34 +181,25 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
                       />
                     </div>
 
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#ffb703' }}>
-                      {used}
+                    {/* Ô nhập Đã Dùng (POS) - Có thể tùy ý sửa, xóa hoặc nhập số mới */}
+                    <div style={{ textAlign: 'center' }}>
+                      <input 
+                        type="number"
+                        className="coffee-input"
+                        style={{ textAlign: 'center', padding: '6px' }}
+                        value={itemData.usedAmount !== undefined ? itemData.usedAmount : ''}
+                        onChange={(e) => handleAmountChange(item.id, 'usedAmount', e.target.value)}
+                        placeholder="0"
+                      />
                     </div>
 
                     <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#52b788' }}>
                       {end}
                     </div>
 
-                    {/* Nút sắp xếp vị trí & Sửa / Xóa */}
                     <div style={{ textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                      {/* Nút lên */}
-                      <button 
-                        className="btn-cyan" 
-                        style={{ padding: '4px 6px', fontSize: '11px' }} 
-                        onClick={() => handleMoveItem(index, 'up')}
-                        title="Đưa lên trên"
-                      >
-                        ⬆
-                      </button>
-                      {/* Nút xuống */}
-                      <button 
-                        className="btn-cyan" 
-                        style={{ padding: '4px 6px', fontSize: '11px' }} 
-                        onClick={() => handleMoveItem(index, 'down')}
-                        title="Đưa xuống dưới"
-                      >
-                        ⬇
-                      </button>
+                      <button className="btn-cyan" style={{ padding: '4px 6px', fontSize: '11px' }} onClick={() => handleMoveItem(index, 'up')} title="Đưa lên trên">⬆</button>
+                      <button className="btn-cyan" style={{ padding: '4px 6px', fontSize: '11px' }} onClick={() => handleMoveItem(index, 'down')} title="Đưa xuống dưới">⬇</button>
 
                       {editingId === item.id ? (
                         <>
