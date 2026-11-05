@@ -57,6 +57,7 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
     : `Gợi Ý Nhập Hàng Tuần Tới (Tính từ 7 ngày qua)`;
 
   // Hàm chốt và lưu bảng gợi ý hiện tại vào lịch sử
+  // Hàm chốt và lưu bảng gợi ý hiện tại vào lịch sử, đồng thời reset về bảng mới nhất
   const handleSaveRestockSession = () => {
     const todayStr = new Date().toISOString().split('T')[0];
     const newSession = {
@@ -68,8 +69,10 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
     const updatedHistory = [newSession, ...restockHistory];
     setRestockHistory(updatedHistory);
     localStorage.setItem('coffee_restock_history', JSON.stringify(updatedHistory));
-    setSelectedHistoryId(newSession.id);
-    alert(`Đã chốt và lưu bảng gợi ý nhập hàng ngày ${todayStr} thành công!`);
+    
+    // 🌟 QUAN TRỌNG: Giữ nguyên ở chế độ "Gợi ý mới nhất" để thấy bảng được làm mới
+    setSelectedHistoryId(''); 
+    alert(`Đã chốt và lưu phiên ngày ${todayStr} vào lịch sử! Bảng gợi ý đã được làm mới.`);
   };
 
   // Xuất file Excel
