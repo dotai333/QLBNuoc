@@ -29,6 +29,12 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     saveDailyWarehouseToServer(selectedDate, updatedDayData);
   };
 
+  // Nút bấm thủ công Lưu / Cập nhật kho
+  const handleSaveWarehouseManual = () => {
+    saveDailyWarehouseToServer(selectedDate, currentDayData);
+    alert(`Đã lưu số liệu kho cho ngày ${selectedDate} thành công!`);
+  };
+
   // Thêm nguyên liệu mới vào danh sách chung
   const handleAddIngredient = (e) => {
     e.preventDefault();
@@ -99,30 +105,36 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     <div className="coffee-card">
       <h2 className="card-title">📦 Quản Lý Kho Nguyên Liệu</h2>
 
-      {/* Chọn ngày kiểm kho */}
+      {/* Chọn ngày kiểm kho & Nút lưu thủ công */}
       <div className="coffee-form">
         <label className="form-label">📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
-        <input
-          type="date"
-          className="coffee-input input-full"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        />
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input 
+            type="date" 
+            className="coffee-input"
+            style={{ flex: 1 }}
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
+          <button className="btn-primary" onClick={handleSaveWarehouseManual} style={{ whiteSpace: 'nowrap' }}>
+            💾 Lưu / Cập Nhật Kho
+          </button>
+        </div>
       </div>
 
       {/* Thêm nguyên liệu mới */}
       <form onSubmit={handleAddIngredient} className="coffee-form">
         <label className="form-label">➕ Thêm Nguyên Liệu Mới</label>
         <div className="form-row">
-          <input
-            type="text"
+          <input 
+            type="text" 
             placeholder="Tên nguyên liệu (VD: Sữa tươi)"
             className="coffee-input input-flex-2"
             value={newIngName}
             onChange={(e) => setNewIngName(e.target.value)}
           />
-          <input
-            type="number"
+          <input 
+            type="number" 
             placeholder="Tồn kho cơ bản"
             className="coffee-input input-flex-1"
             value={newIngBase}
@@ -133,7 +145,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
       </form>
 
       {/* Bảng cân đối kho ngày */}
-      <h3 className="section-heading">📋 Bảng Cân Đối Kho Ngày: <span style={{ color: '#ffb74d' }}>{selectedDate}</span></h3>
+      <h3 className="section-heading">📋 Bảng Cân Đối Kho Ngày: <span style={{ color: '#e6ccb2' }}>{selectedDate}</span></h3>
 
       {ingredients.length === 0 ? (
         <p className="empty-text">Chưa có nguyên liệu nào trong kho.</p>
@@ -141,7 +153,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         <div className="table-responsive">
           <div style={{ minWidth: '600px' }}>
             {/* Header bảng */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', padding: '10px 14px', background: '#1e1816', borderRadius: '8px', fontWeight: 'bold', color: '#d7ccc8', marginBottom: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', padding: '10px 14px', background: '#221915', borderRadius: '8px', fontWeight: 'bold', color: '#e6ccb2', marginBottom: '10px', border: '1px solid #4a3a31' }}>
               <div>Tên Nguyên Liệu</div>
               <div style={{ textAlign: 'center' }}>Đầu Ngày</div>
               <div style={{ textAlign: 'center' }}>Đã Dùng (POS)</div>
@@ -158,16 +170,16 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
                 const end = start - used;
 
                 return (
-                  <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', alignItems: 'center', background: '#1e1816', border: '1px solid #382e2a', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px' }}>
-
+                  <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', alignItems: 'center', background: '#221915', border: '1px solid #4a3a31', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px' }}>
+                    
                     {/* Tên nguyên liệu */}
                     <div>
-                      <span className="item-title-bold" style={{ margin: 0 }}>{item.name}</span>
+                      <span className="item-title-bold" style={{ margin: 0, color: '#f7f3ef' }}>{item.name}</span>
                     </div>
 
                     {/* Ô nhập Đầu Ngày */}
                     <div style={{ textAlign: 'center' }}>
-                      <input
+                      <input 
                         type="number"
                         className="coffee-input"
                         style={{ textAlign: 'center', padding: '6px' }}
@@ -178,12 +190,12 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
                     </div>
 
                     {/* Đã Dùng (POS) - Tự động tính từ bán hàng */}
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#ff8a80' }}>
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#ffb703' }}>
                       {used}
                     </div>
 
                     {/* Cuối Ngày (Đầu ngày - Đã dùng) */}
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#69f0ae' }}>
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#52b788' }}>
                       {end}
                     </div>
 
@@ -196,7 +208,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
                         </>
                       ) : (
                         <>
-                          <button className="btn-info" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => { setEditingId(item.id); setEditBase(item.baseStock); }}>Sửa</button>
+                          <button className="btn-cyan" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => { setEditingId(item.id); setEditBase(item.baseStock); }}>Sửa</button>
                           <button className="btn-danger" onClick={() => handleDeleteIngredient(item.id)}>Xóa</button>
                         </>
                       )}
