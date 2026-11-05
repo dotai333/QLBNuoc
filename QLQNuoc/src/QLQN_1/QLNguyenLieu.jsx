@@ -22,6 +22,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     return `${y}-${m}-${dayStr}`;
   };
 
+  // 🌟 Hàm lấy tồn đầu ngày chuẩn xác nhất: Quét ngược về ngày trước để lấy cuối ngày gần nhất
   const getInheritedStartAmount = (itemId, currentDateStr) => {
     let checkDate = getPreviousDateStr(currentDateStr);
     for (let i = 0; i < 30; i++) {
@@ -29,7 +30,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
       if (dayData && dayData[itemId]) {
         const start = Number(dayData[itemId].startAmount) || 0;
         const used = Number(dayData[itemId].usedAmount) || 0;
-        return Math.max(0, start - used);
+        const remaining = start - used;
+        if (remaining > 0) return remaining;
       }
       checkDate = getPreviousDateStr(checkDate);
     }
@@ -37,29 +39,21 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     return Number(ing?.baseStock) || 0;
   };
 
-  // 🌟 Tự động lưu ngầm dữ liệu kế thừa vào state/server khi chuyển sang ngày mới chưa có dữ liệu
-  useEffect(() => {
-    if (!dailyWarehouse[selectedDate] && ingredients.length > 0) {
-      const autoDayData = {};
-      ingredients.forEach(item => {
-        const inheritedStart = getInheritedStartAmount(item.id, selectedDate);
-        autoDayData[item.id] = {
-          startAmount: inheritedStart,
-          usedAmount: 0
-        };
-      });
-      saveDailyWarehouseToServer(selectedDate, autoDayData);
-    }
-  }, [selectedDate, ingredients]);
-
   const currentDayData = dailyWarehouse[selectedDate] || {};
 
-  const handleUpdateDayData = (ingId, field, value) => {
-    const defaultStart = currentDayData[ingId]?.startAmount !== undefined 
-      ? currentDayData[ingId].startAmount 
-      : getInheritedStartAmount(ingId, selectedDate);
+  // 🌟 Hàm xác định giá trị đầu ngày thực tế (Tránh bị POS ghi đè về 0)
+  const getEffectiveStart = (itemId) => {
+    const itemData = currentDayData[itemId];
+    // Nếu đã có startAmount và > 0 thì dùng, ngược lại bắt buộc lấy từ ngày hôm trước
+    if (itemData && itemData.startAmount !== undefined && Number(itemData.startAmount) > 0) {
+      return Number(itemData.startAmount);
+    }
+    return getInheritedStartAmount(itemId, selectedDate);
+  };
 
-    const existingItemData = currentDayData[ingId] || { startAmount: defaultStart, usedAmount: 0 };
+  const handleUpdateDayData = (ingId, field, value) => {
+    const currentStart = getEffectiveStart(ingId);
+    const existingItemData = currentDayData[ingId] || { startAmount: currentStart, usedAmount: 0 };
 
     const updatedDay = {
       ...currentDayData,
@@ -74,13 +68,12 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
   const handleSaveKho = () => {
     const fullDayData = {};
     ingredients.forEach(item => {
-      const defaultStart = currentDayData[item.id]?.startAmount !== undefined 
-        ? currentDayData[item.id].startAmount 
-        : getInheritedStartAmount(item.id, selectedDate);
+      const startVal = getEffectiveStart(item.id);
+      const usedVal = Number(currentDayData[item.id]?.usedAmount || 0);
       
       fullDayData[item.id] = {
-        startAmount: Number(currentDayData[item.id]?.startAmount !== undefined ? currentDayData[item.id].startAmount : defaultStart),
-        usedAmount: Number(currentDayData[item.id]?.usedAmount || 0)
+        startAmount: startVal,
+        usedAmount: usedVal
       };
     });
 
@@ -90,9 +83,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
   const handleExportExcel = () => {
     const dataToExport = ingredients.map(item => {
-      const dayData = currentDayData[item.id] || {};
-      const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : getInheritedStartAmount(item.id, selectedDate);
-      const used = Number(dayData.usedAmount) || 0;
+      const start = getEffectiveStart(item.id);
+      const used = Number(currentDayData[item.id]?.usedAmount || 0);
       const end = start - used;
 
       return {
@@ -230,12 +222,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
             <div className="item-list">
               {ingredients.map(item => {
-                const dayData = currentDayData[item.id] || {};
-                const start = dayData.startAmount !== undefined 
-                  ? Number(dayData.startAmount) 
-                  : getInheritedStartAmount(item.id, selectedDate);
-                  
-                const used = Number(dayData.usedAmount) || 0;
+                const start = getEffectiveStart(item.id);
+                const used = Number(currentDayData[item.id]?.usedAmount) || 0;
                 const end = start - used;
 
                 return (
