@@ -120,6 +120,7 @@ export default function QuanLyQuanNuoc() {
           <NhapHang 
             ingredients={ingredients} 
             dailyWarehouse={dailyWarehouse} 
+            selectedDate={selectedDate} 
           />
         )}
 

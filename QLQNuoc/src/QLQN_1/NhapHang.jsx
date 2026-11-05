@@ -1,26 +1,27 @@
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 
-export default function NhapHang({ ingredients, dailyWarehouse }) {
+export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) {
   // Quản lý lịch sử các phiên đã chốt
   const [restockHistory, setRestockHistory] = useState(() => {
     const saved = localStorage.getItem('coffee_restock_history');
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Lưu mốc ngày bắt đầu chu kỳ mới
+  // Mốc ngày bắt đầu chu kỳ (mặc định là ngày đầu tiên hoặc ngày được lưu)
   const [cycleStartDate, setCycleStartDate] = useState(() => {
     return localStorage.getItem('coffee_cycle_start_date') || '2026-11-05';
   });
 
   const [selectedHistoryId, setSelectedHistoryId] = useState('');
 
-  // Hàm tính toán tiêu thụ trong chu kỳ hiện tại
+  // 🌟 Tính tổng tiêu thụ từ `cycleStartDate` đến `selectedDate` (ngày đang chọn trên kho/POS)
   const getCurrentCycleData = () => {
     const consumptionPerIng = {};
 
     Object.entries(dailyWarehouse).forEach(([dateStr, dayData]) => {
-      if (dateStr >= cycleStartDate) {
+      // Chỉ lấy dữ liệu nằm trong khoảng từ ngày bắt đầu chu kỳ đến ngày đang chọn
+      if (dateStr >= cycleStartDate && dateStr <= selectedDate) {
         Object.entries(dayData || {}).forEach(([ingId, data]) => {
           const used = Number(data.usedAmount) || 0;
           consumptionPerIng[ingId] = (consumptionPerIng[ingId] || 0) + used;
@@ -51,16 +52,15 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
 
   const activeTitle = selectedHistoryId 
     ? `Lịch Sử Gợi Ý Kỳ: ${restockHistory.find(h => h.id === selectedHistoryId)?.title || ''}`
-    : `Gợi Ý Nhập Hàng Chu Kỳ Hiện Tại (Từ ngày ${cycleStartDate} đến nay)`;
+    : `Gợi Ý Nhập Hàng (Chu kỳ từ ${cycleStartDate} đến ${selectedDate})`;
 
-  // Hàm chốt kỳ
+  // 🌟 Hàm chốt kỳ: Lưu lại, đồng thời dời mốc bắt đầu chu kỳ mới bằng đúng ngày đang chọn (`selectedDate`)
   const handleSaveRestockSession = () => {
-    const todayStr = new Date().toISOString().split('T')[0];
     const newSessionId = Date.now().toString();
 
     const newSession = {
       id: newSessionId,
-      title: `Đến ngày ${todayStr}`,
+      title: `${cycleStartDate} đến ${selectedDate}`,
       items: getCurrentCycleData()
     };
 
@@ -68,26 +68,21 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
     setRestockHistory(updatedHistory);
     localStorage.setItem('coffee_restock_history', JSON.stringify(updatedHistory));
 
-    // 🌟 Đẩy mốc chu kỳ mới sang NGÀY MAI để hôm nay chốt xong là bảng chính về 0 ngay lập tức
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-    setCycleStartDate(tomorrowStr);
-    localStorage.setItem('coffee_cycle_start_date', tomorrowStr);
+    // Đặt mốc chu kỳ mới bắt đầu từ ngày hiện tại đang chọn
+    setCycleStartDate(selectedDate);
+    localStorage.setItem('coffee_cycle_start_date', selectedDate);
 
     setSelectedHistoryId('');
-    alert(`Đã chốt kỳ thành công! Bảng gợi ý đã được làm mới về 0 cho chu kỳ tiếp theo.`);
+    alert(`Đã chốt kỳ từ ${cycleStartDate} đến ${selectedDate} thành công! Bảng gợi ý đã reset về 0.`);
   };
 
-  // 🌟 Hàm xóa một phiên lịch sử cụ thể
+  // Xóa phiên lịch sử
   const handleDeleteHistory = (id) => {
     if (window.confirm("Mày có chắc muốn xóa phiên lịch sử này không?")) {
       const updatedHistory = restockHistory.filter(h => h.id !== id);
       setRestockHistory(updatedHistory);
       localStorage.setItem('coffee_restock_history', JSON.stringify(updatedHistory));
       
-      // Nếu đang xem cái bị xóa thì đưa về chu kỳ hiện tại
       if (selectedHistoryId === id) {
         setSelectedHistoryId('');
       }
@@ -122,7 +117,7 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
             value={selectedHistoryId}
             onChange={(e) => setSelectedHistoryId(e.target.value)}
           >
-            <option value="">⚡ Đang xem: Chu kỳ hiện tại (Từ {cycleStartDate} đến nay)</option>
+            <option value="">⚡ Đang xem: Chu kỳ hiện tại (Từ {cycleStartDate} đến {selectedDate})</option>
             {restockHistory.map(hist => (
               <option key={hist.id} value={hist.id}>
                 📦 Kỳ: {hist.title}
@@ -139,7 +134,6 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
           </button>
         </div>
 
-        {/* 🌟 Danh sách các thẻ lịch sử có nút Xóa trực tiếp bên dưới */}
         {restockHistory.length > 0 && (
           <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <span style={{ fontSize: '12px', color: '#b0a494' }}>Danh sách các kỳ đã chốt (Bấm để xem hoặc xóa):</span>
@@ -180,7 +174,7 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
 
       <h3 className="section-heading" style={{ color: '#ffb703' }}>{activeTitle}</h3>
       <p style={{ color: '#b0a494', fontSize: '13px', marginBottom: '15px' }}>
-        {selectedHistoryId ? 'Đang xem lại bản tổng kết lịch sử của kỳ trước.' : `Hệ thống đang tích lũy dữ liệu tiêu thụ tính từ mốc bắt đầu chu kỳ (${cycleStartDate}). Khi bấm chốt, lịch sử sẽ được lưu lại và bảng tự động reset về 0.`}
+        {selectedHistoryId ? 'Đang xem lại bản tổng kết lịch sử của kỳ trước.' : `Đang tính tổng tiêu thụ từ ngày bắt đầu chu kỳ (${cycleStartDate}) đến ngày hiện tại (${selectedDate}). Khi bấm chốt, dữ liệu lưu vào lịch sử và bảng reset về 0.`}
       </p>
 
       {ingredients.length === 0 ? (
