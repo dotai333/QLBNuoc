@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 
 export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehouse, saveDailyWarehouseToServer }) {
-  // Lấy ngày hiện tại định dạng YYYY-MM-DD làm mặc định
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [newIngName, setNewIngName] = useState('');
@@ -10,10 +9,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
   const [editingId, setEditingId] = useState(null);
   const [editBase, setEditBase] = useState('');
 
-  // Lấy dữ liệu kho của ngày đang chọn
   const currentDayData = dailyWarehouse[selectedDate] || {};
 
-  // Hàm thay đổi số lượng ly bán/nhập trong ngày
   const handleAmountChange = (ingId, field, value) => {
     const currentData = currentDayData[ingId] || { startAmount: '', usedAmount: '' };
     const updatedIngData = {
@@ -29,13 +26,11 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     saveDailyWarehouseToServer(selectedDate, updatedDayData);
   };
 
-  // Nút bấm thủ công Lưu / Cập nhật kho
-  const handleSaveWarehouseManual = () => {
-    saveDailyWarehouseToServer(selectedDate, currentDayData);
-    alert(`Đã lưu số liệu kho cho ngày ${selectedDate} thành công!`);
+  const handleSaveWarehouseManual = async () => {
+    await saveDailyWarehouseToServer(selectedDate, currentDayData);
+    alert(`Đã lưu số liệu kho ngày ${selectedDate} thành công!`);
   };
 
-  // Thêm nguyên liệu mới vào danh sách chung
   const handleAddIngredient = (e) => {
     e.preventDefault();
     if (!newIngName.trim()) return;
@@ -52,7 +47,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     setNewIngBase('');
   };
 
-  // Xóa nguyên liệu
   const handleDeleteIngredient = (id) => {
     if (window.confirm("Mày có chắc muốn xóa nguyên liệu này không?")) {
       const updated = ingredients.filter(item => item.id !== id);
@@ -60,7 +54,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     }
   };
 
-  // Lưu chỉnh sửa cơ bản nguyên liệu
   const handleSaveEdit = (id) => {
     const updated = ingredients.map(item => {
       if (item.id === id) {
@@ -72,11 +65,20 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     setEditingId(null);
   };
 
-  // =========================================================
-  // --- TÍNH NĂNG XUẤT BÁO CÁO KHO RA FILE EXCEL (.XLSX) ---
-  // =========================================================
+  // 🌟 Hàm di chuyển vị trí nguyên liệu lên/xuống
+  const handleMoveItem = (index, direction) => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= ingredients.length) return; // Chặn nếu vượt biên
+
+    const updated = [...ingredients];
+    const temp = updated[index];
+    updated[index] = updated[newIndex];
+    updated[newIndex] = temp;
+
+    setIngredients(updated);
+  };
+
   const handleExportExcel = () => {
-    // Chuẩn bị dữ liệu từ bảng kho ngày hiện tại
     const dataToExport = ingredients.map((item) => {
       const itemData = currentDayData[item.id] || { startAmount: 0, usedAmount: 0 };
       const start = Number(itemData.startAmount) || 0;
@@ -91,12 +93,10 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
       };
     });
 
-    // Tạo file excel qua thư viện xlsx
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Bao Cao Kho");
 
-    // Tên file tải về theo đúng ngày chọn (VD: Bao_Cao_Kho_2026-11-01.xlsx)
     const fileName = `Bao_Cao_Kho_${selectedDate}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
@@ -105,7 +105,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     <div className="coffee-card">
       <h2 className="card-title">📦 Quản Lý Kho Nguyên Liệu</h2>
 
-      {/* Chọn ngày kiểm kho & Nút lưu thủ công */}
       <div className="coffee-form">
         <label className="form-label">📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -122,7 +121,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         </div>
       </div>
 
-      {/* Thêm nguyên liệu mới */}
       <form onSubmit={handleAddIngredient} className="coffee-form">
         <label className="form-label">➕ Thêm Nguyên Liệu Mới</label>
         <div className="form-row">
@@ -144,7 +142,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         </div>
       </form>
 
-      {/* Bảng cân đối kho ngày */}
       <h3 className="section-heading">📋 Bảng Cân Đối Kho Ngày: <span style={{ color: '#e6ccb2' }}>{selectedDate}</span></h3>
 
       {ingredients.length === 0 ? (
@@ -152,7 +149,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
       ) : (
         <div className="table-responsive">
           <div style={{ minWidth: '600px' }}>
-            {/* Header bảng */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', padding: '10px 14px', background: '#221915', borderRadius: '8px', fontWeight: 'bold', color: '#e6ccb2', marginBottom: '10px', border: '1px solid #4a3a31' }}>
               <div>Tên Nguyên Liệu</div>
               <div style={{ textAlign: 'center' }}>Đầu Ngày</div>
@@ -161,9 +157,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
               <div style={{ textAlign: 'right' }}>Thao Tác</div>
             </div>
 
-            {/* Danh sách nguyên liệu trong bảng */}
             <div className="item-list">
-              {ingredients.map((item) => {
+              {ingredients.map((item, index) => {
                 const itemData = currentDayData[item.id] || { startAmount: '', usedAmount: '' };
                 const start = itemData.startAmount !== '' ? Number(itemData.startAmount) : 0;
                 const used = itemData.usedAmount !== '' ? Number(itemData.usedAmount) : 0;
@@ -172,12 +167,10 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
                 return (
                   <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', alignItems: 'center', background: '#221915', border: '1px solid #4a3a31', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px' }}>
                     
-                    {/* Tên nguyên liệu */}
                     <div>
                       <span className="item-title-bold" style={{ margin: 0, color: '#f7f3ef' }}>{item.name}</span>
                     </div>
 
-                    {/* Ô nhập Đầu Ngày */}
                     <div style={{ textAlign: 'center' }}>
                       <input 
                         type="number"
@@ -189,18 +182,35 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
                       />
                     </div>
 
-                    {/* Đã Dùng (POS) - Tự động tính từ bán hàng */}
                     <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#ffb703' }}>
                       {used}
                     </div>
 
-                    {/* Cuối Ngày (Đầu ngày - Đã dùng) */}
                     <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#52b788' }}>
                       {end}
                     </div>
 
-                    {/* Nút thao tác xóa / sửa */}
-                    <div style={{ textAlign: 'right', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                    {/* Nút sắp xếp vị trí & Sửa / Xóa */}
+                    <div style={{ textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      {/* Nút lên */}
+                      <button 
+                        className="btn-cyan" 
+                        style={{ padding: '4px 6px', fontSize: '11px' }} 
+                        onClick={() => handleMoveItem(index, 'up')}
+                        title="Đưa lên trên"
+                      >
+                        ⬆
+                      </button>
+                      {/* Nút xuống */}
+                      <button 
+                        className="btn-cyan" 
+                        style={{ padding: '4px 6px', fontSize: '11px' }} 
+                        onClick={() => handleMoveItem(index, 'down')}
+                        title="Đưa xuống dưới"
+                      >
+                        ⬇
+                      </button>
+
                       {editingId === item.id ? (
                         <>
                           <button className="btn-cyan" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleSaveEdit(item.id)}>Lưu</button>
@@ -222,7 +232,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         </div>
       )}
 
-      {/* Nút Xuất Báo Cáo Excel canh giữa nổi bật ở đáy bảng */}
       <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'center' }}>
         <button className="btn-excel" onClick={handleExportExcel}>
           📊 Gửi / Tải Báo Cáo Nguyên Liệu (Excel)
