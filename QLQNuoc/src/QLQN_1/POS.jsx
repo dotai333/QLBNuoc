@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-export default function POS({ recipes, ingredients }) {
+export default function POS({ recipes, ingredients, saveDailyWarehouseToServer, dailyWarehouse }) {
     const [dailySales, setDailySales] = useState({});
     const [notification, setNotification] = useState('');
     const [lastSummary, setLastSummary] = useState(null);
@@ -35,17 +35,17 @@ export default function POS({ recipes, ingredients }) {
             const ingList = item.drink.ingredients || item.drink.nguyenLieu || [];
             
             for (const recipeIng of ingList) {
+                const recipeIngId = String(recipeIng.ingredientId || recipeIng.id || '');
                 const recipeIngName = (recipeIng.name || recipeIng.ten || '').trim().toLowerCase();
                 const totalRequired = (recipeIng.amount || recipeIng.soLuong || 0) * item.quantity;
 
-                if (!recipeIngName) continue;
-
-                // Khớp nguyên liệu theo TÊN trong kho
-                const matchedIngredient = ingredients.find(i => 
-                    (i.name || '').trim().toLowerCase() === recipeIngName ||
-                    (i.name || '').trim().toLowerCase().includes(recipeIngName) ||
-                    recipeIngName.includes((i.name || '').trim().toLowerCase())
-                );
+                // Khớp nguyên liệu linh hoạt theo ID hoặc theo TÊN trong kho
+                const matchedIngredient = ingredients.find(i => {
+                    const iId = String(i.id || '');
+                    const iName = (i.name || '').trim().toLowerCase();
+                    return (recipeIngId && iId === recipeIngId) || 
+                           (recipeIngName && (iName === recipeIngName || iName.includes(recipeIngName) || recipeIngName.includes(iName)));
+                });
 
                 if (matchedIngredient) {
                     const ingId = matchedIngredient.id;
@@ -55,46 +55,25 @@ export default function POS({ recipes, ingredients }) {
         }
 
         const todayStr = new Date().toISOString().split('T')[0];
+        const currentDayData = dailyWarehouse[todayStr] || {};
+        let updatedDayData = { ...currentDayData };
 
-        try {
-            // 1. Tải dữ liệu ngày hôm nay từ Render server lên trước
-            const res = await axios.get(`https://qlbnuoc.onrender.com/soLieu`);
-            const list = res.data || [];
-            const found = list.find(item => String(item.id) === String(todayStr) || String(item.date) === String(todayStr));
-
-            let currentDayData = found ? (found.data || {}) : {};
-            let updatedDayData = { ...currentDayData };
-
-            // 2. Cộng dồn số lượng đã dùng (used)
-            for (const [ingId, amount] of Object.entries(consumedLog)) {
-                const existingIngData = updatedDayData[ingId] || {};
-                updatedDayData[ingId] = {
-                    ...existingIngData,
-                    opening: existingIngData.opening !== undefined ? existingIngData.opening : 0,
-                    used: (existingIngData.used || 0) + Number(amount)
-                };
-            }
-
-            const payload = {
-                id: todayStr,
-                date: todayStr,
-                data: updatedDayData
+        // Cộng dồn số lượng đã dùng (used)
+        for (const [ingId, amount] of Object.entries(consumedLog)) {
+            const existingIngData = updatedDayData[ingId] || { startAmount: 0, usedAmount: 0 };
+            updatedDayData[ingId] = {
+                ...existingIngData,
+                startAmount: existingIngData.startAmount !== undefined ? existingIngData.startAmount : 0,
+                usedAmount: (Number(existingIngData.usedAmount) || 0) + Number(amount)
             };
-
-            // 3. Ghi đè hoặc tạo mới lên Render server
-            if (found) {
-                await axios.put(`https://qlbnuoc.onrender.com/soLieu/${found.id}`, payload);
-            } else {
-                await axios.post(`https://qlbnuoc.onrender.com/soLieu`, payload);
-            }
-
-            setNotification('✅ Đã gửi báo cáo bán hàng & trừ kho thành công!');
-            setLastSummary(soldItems);
-            setDailySales({});
-        } catch (error) {
-            console.error("Lỗi trừ kho POS:", error);
-            alert("Gửi báo cáo thất bại, kiểm tra lại kết nối mạng!");
         }
+
+        // Gọi hàm lưu dữ liệu kho (hỗ trợ lưu cả LocalStorage & Server)
+        await saveDailyWarehouseToServer(todayStr, updatedDayData);
+
+        setNotification('✅ Đã gửi báo cáo bán hàng & trừ kho thành công!');
+        setLastSummary(soldItems);
+        setDailySales({});
     };
 
     return (
@@ -102,7 +81,7 @@ export default function POS({ recipes, ingredients }) {
             <h3 className="card-title">📊 Nhập Tổng Số Lượng Bán Trong Ngày (Chốt Ca)</h3>
             
             {notification && (
-                <div className={notification.startsWith('✅') ? "notification-success" : "notification-error"}>
+                <div style={{ background: '#1b6b39', color: '#fff', padding: '10px 14px', borderRadius: '8px', marginBottom: '15px', fontWeight: '600', textAlign: 'center' }}>
                     {notification}
                 </div>
             )}
@@ -111,7 +90,7 @@ export default function POS({ recipes, ingredients }) {
                 <p className="empty-text">Chưa có món nào trong thực đơn. Vui lòng tạo công thức trước!</p>
             ) : (
                 <div className="pos-daily-container">
-                    <p className="item-title" style={{ color: '#d7ccc8', margin: 0 }}>
+                    <p className="item-title" style={{ color: '#d7ccc8', margin: '0 0 15px 0' }}>
                         Nhập số lượng ly bán được hôm nay, hệ thống sẽ tự động tổng hợp và trừ kho:
                     </p>
 
@@ -119,17 +98,17 @@ export default function POS({ recipes, ingredients }) {
                         {recipes.map(drink => {
                             const ingList = drink.ingredients || drink.nguyenLieu || [];
                             return (
-                                <div key={drink.id} className="daily-input-row">
+                                <div key={drink.id} className="daily-input-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#221915', border: '1px solid #4a3a31', padding: '14px', borderRadius: '10px', marginBottom: '10px' }}>
                                     <div>
-                                        <strong className="item-title" style={{ fontSize: '16px', display: 'block' }}>{drink.name}</strong>
-                                        <span className="drink-card-hint">
+                                        <strong className="item-title" style={{ fontSize: '16px', display: 'block', color: '#f7f3ef' }}>{drink.name}</strong>
+                                        <span className="drink-card-hint" style={{ color: '#d8c3a5', fontSize: '13px' }}>
                                             Công thức: {ingList.length > 0 
                                                 ? ingList.map(i => `${i?.name || i?.ten || 'Thành phần'} (${i?.amount || i?.soLuong || 0})`).join(', ') 
                                                 : 'Chưa thiết lập nguyên liệu'}
                                         </span>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span className="drink-card-hint">Số lượng ly:</span>
+                                        <span className="drink-card-hint" style={{ color: '#d8c3a5' }}>Số lượng ly:</span>
                                         <input 
                                             type="number" 
                                             min="0"
@@ -137,6 +116,7 @@ export default function POS({ recipes, ingredients }) {
                                             value={dailySales[drink.id] || ''}
                                             onChange={(e) => handleQuantityChange(drink.id, e.target.value)}
                                             className="coffee-input daily-input"
+                                            style={{ width: '80px', textAlign: 'center', padding: '8px' }}
                                         />
                                     </div>
                                 </div>
@@ -144,19 +124,19 @@ export default function POS({ recipes, ingredients }) {
                         })}
                     </div>
 
-                    <button onClick={handleSubmitDailyReport} className="btn-success" style={{ width: '100%', padding: '14px', fontSize: '15px' }}>
+                    <button onClick={handleSubmitDailyReport} className="btn-success" style={{ width: '100%', padding: '14px', fontSize: '15px', marginTop: '10px', background: '#1b6b39', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
                         Gửi Báo Cáo Về Kho & Trừ Kho
                     </button>
                 </div>
             )}
 
             {lastSummary && (
-                <div className="summary-box">
-                    <h4 className="summary-title">📋 Tổng Kết Tiêu Hao Hôm Nay</h4>
-                    <ul className="sub-list">
+                <div className="summary-box" style={{ marginTop: '20px', background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31' }}>
+                    <h4 className="summary-title" style={{ color: '#e6ccb2', margin: '0 0 10px 0' }}>📋 Tổng Kết Tiêu Hao Hôm Nay</h4>
+                    <ul className="sub-list" style={{ paddingLeft: '20px', margin: 0 }}>
                         {lastSummary.map((item, idx) => (
-                            <li key={idx} className="sub-list-item" style={{ marginBottom: '8px' }}>
-                                Bán <strong style={{ color: '#ff8a80' }}>{item.quantity}</strong> ly <strong style={{ color: '#f5efe6' }}>{item.drink?.name}</strong>
+                            <li key={idx} className="sub-list-item" style={{ marginBottom: '6px', color: '#f7f3ef' }}>
+                                Bán <strong style={{ color: '#ffb703' }}>{item.quantity}</strong> ly <strong style={{ color: '#e6ccb2' }}>{item.drink?.name}</strong>
                             </li>
                         ))}
                     </ul>
