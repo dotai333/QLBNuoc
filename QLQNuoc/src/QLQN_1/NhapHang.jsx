@@ -1,29 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 
 export default function NhapHang({ ingredients, dailyWarehouse }) {
-  // Quản lý danh sách lịch sử gợi ý nhập hàng
+  // Quản lý lịch sử các phiên đã chốt
   const [restockHistory, setRestockHistory] = useState(() => {
     const saved = localStorage.getItem('coffee_restock_history');
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Lưu mốc thời gian (hoặc ID phiên) của lần chốt gần nhất để làm mốc reset
-  const [lastResetTimestamp, setLastResetTimestamp] = useState(() => {
-    return localStorage.getItem('coffee_last_reset_timestamp') || '0';
+  // Lưu mốc ngày bắt đầu chu kỳ mới
+  const [cycleStartDate, setCycleStartDate] = useState(() => {
+    return localStorage.getItem('coffee_cycle_start_date') || '2026-11-05';
   });
 
   const [selectedHistoryId, setSelectedHistoryId] = useState('');
 
-  // Hàm tính toán gợi ý nhập hàng: Chỉ tính tiêu thụ từ sau thời điểm chốt gần nhất trở đi
-  const getWeeklyRestockData = () => {
+  // Hàm tính toán tiêu thụ trong chu kỳ hiện tại
+  const getCurrentCycleData = () => {
     const consumptionPerIng = {};
-    
-    // Duyệt qua tất cả các ngày có trong kho, chỉ lấy những ngày có timestamp >= lastResetTimestamp
+
     Object.entries(dailyWarehouse).forEach(([dateStr, dayData]) => {
-      // Chuyển ngày thành timestamp để so sánh mốc chốt
-      const dayTime = new Date(dateStr).getTime();
-      if (dayTime > Number(lastResetTimestamp)) {
+      if (dateStr >= cycleStartDate) {
         Object.entries(dayData || {}).forEach(([ingId, data]) => {
           const used = Number(data.usedAmount) || 0;
           consumptionPerIng[ingId] = (consumptionPerIng[ingId] || 0) + used;
@@ -32,15 +29,15 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
     });
 
     return ingredients.map(item => {
-      const totalUsedSinceReset = consumptionPerIng[item.id] || 0;
-      const projectedNeed = Math.ceil(totalUsedSinceReset * 1.1); // Dự trù tăng 10%
+      const totalUsedInCycle = consumptionPerIng[item.id] || 0;
+      const projectedNeed = Math.ceil(totalUsedInCycle * 1.1); // Dự trù tăng 10%
       const currentStock = Number(item.baseStock) || 0;
       const suggestedBuy = Math.max(0, projectedNeed - currentStock);
 
       return {
         id: item.id,
         name: item.name,
-        totalUsedLastWeek: totalUsedSinceReset,
+        totalUsedLastWeek: totalUsedInCycle,
         projectedNeed,
         currentStock,
         suggestedBuy
@@ -50,39 +47,52 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
 
   const currentActiveData = selectedHistoryId 
     ? (restockHistory.find(h => h.id === selectedHistoryId)?.items || [])
-    : getWeeklyRestockData();
+    : getCurrentCycleData();
 
   const activeTitle = selectedHistoryId 
-    ? `Lịch Sử Gợi Ý Ngày: ${restockHistory.find(h => h.id === selectedHistoryId)?.title || ''}`
-    : `Gợi Ý Nhập Hàng Chu kỳ Mới (Tính từ sau lần chốt gần nhất)`;
+    ? `Lịch Sử Gợi Ý Kỳ: ${restockHistory.find(h => h.id === selectedHistoryId)?.title || ''}`
+    : `Gợi Ý Nhập Hàng Chu Kỳ Hiện Tại (Từ ngày ${cycleStartDate} đến nay)`;
 
-  // Hàm chốt và lưu phiên, đồng thời thiết lập mốc thời gian mới để reset bảng chính về 0
+  // Hàm chốt kỳ
   const handleSaveRestockSession = () => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const nowTime = Date.now();
+    const newSessionId = Date.now().toString();
 
     const newSession = {
-      id: nowTime.toString(),
-      title: todayStr,
-      items: getWeeklyRestockData()
+      id: newSessionId,
+      title: `${cycleStartDate} đến ${todayStr}`,
+      items: getCurrentCycleData()
     };
 
     const updatedHistory = [newSession, ...restockHistory];
     setRestockHistory(updatedHistory);
     localStorage.setItem('coffee_restock_history', JSON.stringify(updatedHistory));
 
-    // Cập nhật mốc reset là thời điểm hiện tại -> Các số liệu cũ sẽ được ẩn đi, bảng mới tính từ 0
-    setLastResetTimestamp(nowTime.toString());
-    localStorage.setItem('coffee_last_reset_timestamp', nowTime.toString());
+    setCycleStartDate(todayStr);
+    localStorage.setItem('coffee_cycle_start_date', todayStr);
 
     setSelectedHistoryId('');
-    alert(`Đã chốt phiên ${todayStr} thành công! Bảng gợi ý mới đã được làm sạch và bắt đầu tính chu kỳ mới.`);
+    alert(`Đã chốt kỳ thành công từ ${cycleStartDate} đến ${todayStr}! Bảng gợi ý đã được làm mới về 0.`);
+  };
+
+  // 🌟 Hàm xóa một phiên lịch sử cụ thể
+  const handleDeleteHistory = (id) => {
+    if (window.confirm("Mày có chắc muốn xóa phiên lịch sử này không?")) {
+      const updatedHistory = restockHistory.filter(h => h.id !== id);
+      setRestockHistory(updatedHistory);
+      localStorage.setItem('coffee_restock_history', JSON.stringify(updatedHistory));
+      
+      // Nếu đang xem cái bị xóa thì đưa về chu kỳ hiện tại
+      if (selectedHistoryId === id) {
+        setSelectedHistoryId('');
+      }
+    }
   };
 
   const handleExportRestockExcel = () => {
     const dataToExport = currentActiveData.map(item => ({
       "Tên Nguyên Liệu": item.name,
-      "Tiêu Thụ Kỳ Này": item.totalUsedLastWeek,
+      "Tiêu Thụ Trong Kỳ": item.totalUsedLastWeek,
       "Dự Kiến Tuần Tới (+10%)": item.projectedNeed,
       "Tồn Kho Hiện Tại": item.currentStock,
       "Cần Nhập Thêm": item.suggestedBuy
@@ -91,15 +101,15 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Goi Y Nhap Hang");
-    XLSX.writeFile(workbook, `Goi_Y_Nhap_Hang_${selectedHistoryId ? 'Cu_' + selectedHistoryId : 'Moi_Nhat'}.xlsx`);
+    XLSX.writeFile(workbook, `Goi_Y_Nhap_Hang_${selectedHistoryId ? 'Cu' : 'Chu_Ky_Moi'}.xlsx`);
   };
 
   return (
     <div className="coffee-card">
-      <h2 className="card-title">📦 Quản Lý Gợi Ý Nhập Hàng & Lịch Sử</h2>
+      <h2 className="card-title">📦 Quản Lý Gợi Ý Nhập Hàng & Lịch Sử Chu Kỳ</h2>
 
       <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
-        <label className="form-label" style={{ color: '#e6ccb2', marginBottom: '8px', display: 'block' }}>📂 Chọn Xem Lịch Sử Gợi Ý Cũ:</label>
+        <label className="form-label" style={{ color: '#e6ccb2', marginBottom: '8px', display: 'block' }}>📂 Chọn Xem Lịch Sử Các Kỳ Đã Chốt:</label>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <select 
             className="coffee-input"
@@ -107,10 +117,10 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
             value={selectedHistoryId}
             onChange={(e) => setSelectedHistoryId(e.target.value)}
           >
-            <option value="">⚡ Đang xem: Gợi ý chu kỳ mới (Đang chạy)</option>
+            <option value="">⚡ Đang xem: Chu kỳ hiện tại (Từ {cycleStartDate} đến nay)</option>
             {restockHistory.map(hist => (
               <option key={hist.id} value={hist.id}>
-                📦 Phiên chốt ngày: {hist.title}
+                📦 Kỳ: {hist.title}
               </option>
             ))}
           </select>
@@ -120,14 +130,52 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
             onClick={handleSaveRestockSession}
             style={{ whiteSpace: 'nowrap' }}
           >
-            💾 Chốt & Làm Mới Chu Kỳ Mới
+            💾 Chốt Kỳ & Làm Mới Bảng Về 0
           </button>
         </div>
+
+        {/* 🌟 Danh sách các thẻ lịch sử có nút Xóa trực tiếp bên dưới */}
+        {restockHistory.length > 0 && (
+          <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#b0a494' }}>Danh sách các kỳ đã chốt (Bấm để xem hoặc xóa):</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {restockHistory.map(hist => (
+                <div 
+                  key={hist.id} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    background: selectedHistoryId === hist.id ? '#4a3a31' : '#1a120e', 
+                    border: '1px solid #4a3a31', 
+                    padding: '6px 10px', 
+                    borderRadius: '6px', 
+                    gap: '8px' 
+                  }}
+                >
+                  <span 
+                    style={{ color: '#f7f3ef', cursor: 'pointer', fontSize: '13px', fontWeight: selectedHistoryId === hist.id ? 'bold' : 'normal' }}
+                    onClick={() => setSelectedHistoryId(hist.id)}
+                  >
+                    📦 Kỳ: {hist.title}
+                  </span>
+                  <button 
+                    className="btn-danger" 
+                    style={{ padding: '2px 6px', fontSize: '11px', background: '#9b2226', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer' }} 
+                    onClick={() => handleDeleteHistory(hist.id)}
+                    title="Xóa phiên này"
+                  >
+                    Xóa
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <h3 className="section-heading" style={{ color: '#ffb703' }}>{activeTitle}</h3>
       <p style={{ color: '#b0a494', fontSize: '13px', marginBottom: '15px' }}>
-        {selectedHistoryId ? 'Đang xem lại bản ghi lịch sử đã chốt.' : 'Bảng này tự động tích lũy lượng tiêu thụ phát sinh từ sau lần chốt gần nhất để chuẩn bị cho kỳ nhập hàng tiếp theo.'}
+        {selectedHistoryId ? 'Đang xem lại bản tổng kết lịch sử của kỳ trước.' : `Hệ thống đang tích lũy dữ liệu tiêu thụ tính từ mốc bắt đầu chu kỳ (${cycleStartDate}). Khi bấm chốt, lịch sử sẽ được lưu lại và bảng tự động reset về 0.`}
       </p>
 
       {ingredients.length === 0 ? (
@@ -137,7 +185,7 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
           <div style={{ minWidth: '600px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', padding: '10px 14px', background: '#221915', borderRadius: '8px', fontWeight: 'bold', color: '#e6ccb2', marginBottom: '10px', border: '1px solid #4a3a31' }}>
               <div>Tên Nguyên Liệu</div>
-              <div style={{ textAlign: 'center' }}>Tiêu Thụ (Kỳ Này)</div>
+              <div style={{ textAlign: 'center' }}>Tiêu Thụ (Trong Kỳ)</div>
               <div style={{ textAlign: 'center' }}>Dự Kiến Tuần Tới</div>
               <div style={{ textAlign: 'center' }}>Tồn Kho</div>
               <div style={{ textAlign: 'center', color: '#ffb703' }}>Gợi Ý Cần Nhập</div>
