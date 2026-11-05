@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 
@@ -22,38 +22,23 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     return `${y}-${m}-${dayStr}`;
   };
 
-  // 🌟 CƠ CHẾ KẾ THỪA TỰ ĐỘNG: Khi chọn ngày mới, tự động lấy cuối ngày hôm trước gán và LƯU THẲNG vào state ngày hiện tại
-  useEffect(() => {
-    if (!dailyWarehouse[selectedDate] && ingredients.length > 0) {
-      const prevDateStr = getPreviousDateStr(selectedDate);
-      const prevDayData = dailyWarehouse[prevDateStr];
-
-      const autoFilledDay = {};
-      ingredients.forEach(item => {
-        let startVal = item.baseStock || 0;
-        if (prevDayData && prevDayData[item.id]) {
-          const pStart = Number(prevDayData[item.id].startAmount) || 0;
-          const pUsed = Number(prevDayData[item.id].usedAmount) || 0;
-          startVal = Math.max(0, pStart - pUsed);
-        }
-        autoFilledDay[item.id] = {
-          startAmount: startVal,
-          usedAmount: 0
-        };
-      });
-
-      // Lưu tự động xuống state & server để ngày tiếp theo có cái mà đọc
-      saveDailyWarehouseToServer(selectedDate, autoFilledDay);
-    }
-  }, [selectedDate, dailyWarehouse, ingredients]);
-
   const currentDayData = dailyWarehouse[selectedDate] || {};
 
   const handleUpdateDayData = (ingId, field, value) => {
+    const prevDateStr = getPreviousDateStr(selectedDate);
+    const prevDayData = dailyWarehouse[prevDateStr] || {};
+    
+    // Tính sẵn giá trị đầu ngày mặc định nếu chưa có
+    const defaultStart = prevDayData[ingId] 
+      ? Math.max(0, (Number(prevDayData[ingId].startAmount) || 0) - (Number(prevDayData[ingId].usedAmount) || 0))
+      : (ingredients.find(i => i.id === ingId)?.baseStock || 0);
+
+    const existingItemData = currentDayData[ingId] || { startAmount: defaultStart, usedAmount: 0 };
+
     const updatedDay = {
       ...currentDayData,
       [ingId]: {
-        ...(currentDayData[ingId] || { startAmount: 0, usedAmount: 0 }),
+        ...existingItemData,
         [field]: Number(value) || 0
       }
     };
@@ -67,8 +52,14 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
   const handleExportExcel = () => {
     const dataToExport = ingredients.map(item => {
+      const prevDateStr = getPreviousDateStr(selectedDate);
+      const prevDayData = dailyWarehouse[prevDateStr] || {};
+      const prevEndAmount = prevDayData[item.id] 
+        ? Math.max(0, (Number(prevDayData[item.id].startAmount) || 0) - (Number(prevDayData[item.id].usedAmount) || 0))
+        : (item.baseStock || 0);
+
       const dayData = currentDayData[item.id] || {};
-      const start = Number(dayData.startAmount) || 0;
+      const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : prevEndAmount;
       const used = Number(dayData.usedAmount) || 0;
       const end = start - used;
 
@@ -210,8 +201,16 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
             <div className="item-list">
               {ingredients.map(item => {
-                const dayData = currentDayData[item.id] || { startAmount: item.baseStock || 0, usedAmount: 0 };
-                const start = Number(dayData.startAmount) || 0;
+                const prevDateStr = getPreviousDateStr(selectedDate);
+                const prevDayData = dailyWarehouse[prevDateStr] || {};
+                
+                // Lấy số cuối ngày hôm trước làm đầu ngày hôm nay nếu hôm nay chưa có dữ liệu
+                const prevEndAmount = prevDayData[item.id] 
+                  ? Math.max(0, (Number(prevDayData[item.id].startAmount) || 0) - (Number(prevDayData[item.id].usedAmount) || 0))
+                  : (item.baseStock || 0);
+
+                const dayData = currentDayData[item.id] || {};
+                const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : prevEndAmount;
                 const used = Number(dayData.usedAmount) || 0;
                 const end = start - used;
 
