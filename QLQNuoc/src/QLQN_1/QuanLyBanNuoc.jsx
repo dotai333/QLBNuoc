@@ -3,6 +3,7 @@ import axios from 'axios';
 import POS from './POS';
 import QLCongThuc from './QLCongThuc';
 import QLNguyenLieu from './QLNguyenLieu';
+import NhapHang from './NhapHang'; // 🌟 1. Import component NhapHang vào
 import '../App.css';
 import * as XLSX from 'xlsx';
 
@@ -87,6 +88,10 @@ export default function QuanLyQuanNuoc() {
           <button onClick={() => setActiveTab('inventory')} className={`nav-btn ${activeTab === 'inventory' ? 'active' : ''}`}>
             📦 Quản Lý Kho
           </button>
+          {/* 🌟 2. Thêm nút chuyển sang trang Gợi Ý Nhập Hàng trên Navbar */}
+          <button onClick={() => setActiveTab('restock')} className={`nav-btn ${activeTab === 'restock' ? 'active' : ''}`}>
+            📈 Gợi Ý Nhập Hàng
+          </button>
           <button onClick={() => setActiveTab('recipe')} className={`nav-btn ${activeTab === 'recipe' ? 'active' : ''}`}>
             🍹 Công Thức Món
           </button>
@@ -110,6 +115,14 @@ export default function QuanLyQuanNuoc() {
             setIngredients={setIngredients}
             dailyWarehouse={dailyWarehouse}
             saveDailyWarehouseToServer={saveDailyWarehouseToServer}
+          />
+        )}
+
+        {/* 🌟 3. Hiển thị component NhapHang khi bấm vào tab restock */}
+        {activeTab === 'restock' && (
+          <NhapHang 
+            ingredients={ingredients} 
+            dailyWarehouse={dailyWarehouse} 
           />
         )}
 
