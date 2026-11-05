@@ -7,11 +7,33 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
   const currentDayData = dailyWarehouse[selectedDate] || {};
 
+  const getPreviousDateStr = (dateStr) => {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+
+    const d = new Date(year, month, day);
+    d.setDate(d.getDate() - 1);
+
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dayStr}`;
+  };
+
   const handleUpdateDayData = (ingId, field, value) => {
+    const prevDateStr = getPreviousDateStr(selectedDate);
+    const prevDayData = dailyWarehouse[prevDateStr] || {};
+    const prevEndAmount = prevDayData[ingId] ? (Number(prevDayData[ingId].startAmount || 0) - Number(prevDayData[ingId].usedAmount || 0)) : (ingredients.find(i => i.id === ingId)?.baseStock || 0);
+
+    const currentItemData = currentDayData[ingId] || { startAmount: prevEndAmount, usedAmount: 0 };
+
     const updatedDay = {
       ...currentDayData,
       [ingId]: {
-        ...(currentDayData[ingId] || { startAmount: 0, usedAmount: 0, endAmount: 0 }),
+        ...currentItemData,
         [field]: Number(value) || 0
       }
     };
@@ -39,7 +61,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     }
   };
 
-  // Nút xóa toàn bộ dữ liệu trong ngày
   const handleDeleteDayData = async () => {
     if (window.confirm(`Mày có chắc muốn xóa sạch toàn bộ dữ liệu kho của ngày ${selectedDate} không?`)) {
       saveDailyWarehouseToServer(selectedDate, {});
@@ -62,7 +83,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     <div className="coffee-card">
       <h2 className="card-title">📦 Quản Lý Kho Nguyên Liệu</h2>
 
-      {/* Phần chọn ngày và nút lưu kho chung */}
       <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
         <label className="form-label" style={{ color: '#e6ccb2', marginBottom: '8px', display: 'block' }}>📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -73,17 +93,9 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
             onChange={(e) => setSelectedDate(e.target.value)}
             style={{ flex: 1 }}
           />
-          <button 
-            className="btn-primary" 
-            onClick={() => alert(`Đã cập nhật kho ngày ${selectedDate}`)}
-            style={{ whiteSpace: 'nowrap' }}
-          >
-            💾 Lưu / Cập Nhật Kho
-          </button>
         </div>
       </div>
 
-      {/* Form thêm nguyên liệu mới */}
       <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
         <h3 style={{ color: '#ffb703', fontSize: '15px', marginBottom: '10px' }}>➕ Thêm Nguyên Liệu Mới</h3>
         <form onSubmit={handleAddIngredient} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -107,7 +119,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         </form>
       </div>
 
-      {/* Tiêu đề bảng và nút xóa toàn bộ ngày */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
         <h3 className="section-heading" style={{ color: '#ffb703', margin: 0 }}>
           📋 Bảng Cân Đối Kho Ngày: {selectedDate}
@@ -144,8 +155,12 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
             <div className="item-list">
               {ingredients.map(item => {
-                const dayData = currentDayData[item.id] || { startAmount: item.baseStock || 0, usedAmount: 0 };
-                const start = Number(dayData.startAmount) || 0;
+                const prevDateStr = getPreviousDateStr(selectedDate);
+                const prevDayData = dailyWarehouse[prevDateStr] || {};
+                const prevEndAmount = prevDayData[item.id] ? (Number(prevDayData[item.id].startAmount || 0) - Number(prevDayData[item.id].usedAmount || 0)) : (item.baseStock || 0);
+
+                const dayData = currentDayData[item.id] || {};
+                const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : prevEndAmount;
                 const used = Number(dayData.usedAmount) || 0;
                 const end = start - used;
 
@@ -153,7 +168,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
                   <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '2.5fr 1.2fr 1.2fr 1.2fr', gap: '10px', alignItems: 'center', background: '#221915', border: '1px solid #4a3a31', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px' }}>
                     <div style={{ color: '#f7f3ef', fontWeight: '600' }}>{item.name}</div>
                     
-                    {/* Đầu ngày */}
                     <div style={{ textAlign: 'center' }}>
                       <input 
                         type="number"
@@ -164,12 +178,10 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
                       />
                     </div>
 
-                    {/* Đã dùng POS */}
                     <div style={{ textAlign: 'center', color: '#ffb703', fontWeight: 'bold' }}>
                       {used}
                     </div>
 
-                    {/* Cuối ngày */}
                     <div style={{ textAlign: 'center', fontWeight: 'bold', color: end < 0 ? '#ff4d4d' : '#52b788', fontSize: '15px' }}>
                       {end}
                     </div>
