@@ -22,16 +22,33 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     return `${y}-${m}-${dayStr}`;
   };
 
+  // 🌟 Hàm tìm thông minh: Tự động tìm lùi về các ngày trước đó để lấy số "Cuối Ngày" gần nhất đắp sang
+  const getInheritedStartAmount = (itemId, currentDateStr) => {
+    let checkDate = getPreviousDateStr(currentDateStr);
+    
+    // Duyệt ngược tối đa 30 ngày về trước để tìm dữ liệu thực tế đã có của nguyên liệu này
+    for (let i = 0; i < 30; i++) {
+      const dayData = dailyWarehouse[checkDate];
+      if (dayData && dayData[itemId]) {
+        const start = Number(dayData[itemId].startAmount) || 0;
+        const used = Number(dayData[itemId].usedAmount) || 0;
+        return Math.max(0, start - used); // Trả về số cuối ngày của ngày gần nhất tìm thấy
+      }
+      checkDate = getPreviousDateStr(checkDate);
+    }
+
+    // Nếu ngược về quá khứ không có gì thì lấy tồn kho cơ bản của nguyên liệu
+    const ing = ingredients.find(i => i.id === itemId);
+    return Number(ing?.baseStock) || 0;
+  };
+
   const currentDayData = dailyWarehouse[selectedDate] || {};
 
   const handleUpdateDayData = (ingId, field, value) => {
-    const prevDateStr = getPreviousDateStr(selectedDate);
-    const prevDayData = dailyWarehouse[prevDateStr] || {};
-    
-    // Tính sẵn giá trị đầu ngày mặc định nếu chưa có
-    const defaultStart = prevDayData[ingId] 
-      ? Math.max(0, (Number(prevDayData[ingId].startAmount) || 0) - (Number(prevDayData[ingId].usedAmount) || 0))
-      : (ingredients.find(i => i.id === ingId)?.baseStock || 0);
+    // Nếu người dùng bắt đầu chỉnh sửa, tự động lấy giá trị kế thừa làm gốc nếu chưa có
+    const defaultStart = currentDayData[ingId]?.startAmount !== undefined 
+      ? currentDayData[ingId].startAmount 
+      : getInheritedStartAmount(ingId, selectedDate);
 
     const existingItemData = currentDayData[ingId] || { startAmount: defaultStart, usedAmount: 0 };
 
@@ -46,20 +63,27 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
   };
 
   const handleSaveKho = () => {
-    saveDailyWarehouseToServer(selectedDate, currentDayData);
+    // Khi bấm lưu, gom toàn bộ dữ liệu đang hiển thị (bao gồm cả dữ liệu tự động kế thừa) lưu thẳng vào state & server
+    const fullDayData = {};
+    ingredients.forEach(item => {
+      const defaultStart = currentDayData[item.id]?.startAmount !== undefined 
+        ? currentDayData[item.id].startAmount 
+        : getInheritedStartAmount(item.id, selectedDate);
+      
+      fullDayData[item.id] = {
+        startAmount: Number(currentDayData[item.id]?.startAmount !== undefined ? currentDayData[item.id].startAmount : defaultStart),
+        usedAmount: Number(currentDayData[item.id]?.usedAmount || 0)
+      };
+    });
+
+    saveDailyWarehouseToServer(selectedDate, fullDayData);
     alert(`Đã lưu kho ngày ${selectedDate} thành công!`);
   };
 
   const handleExportExcel = () => {
     const dataToExport = ingredients.map(item => {
-      const prevDateStr = getPreviousDateStr(selectedDate);
-      const prevDayData = dailyWarehouse[prevDateStr] || {};
-      const prevEndAmount = prevDayData[item.id] 
-        ? Math.max(0, (Number(prevDayData[item.id].startAmount) || 0) - (Number(prevDayData[item.id].usedAmount) || 0))
-        : (item.baseStock || 0);
-
       const dayData = currentDayData[item.id] || {};
-      const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : prevEndAmount;
+      const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : getInheritedStartAmount(item.id, selectedDate);
       const used = Number(dayData.usedAmount) || 0;
       const end = start - used;
 
@@ -201,16 +225,13 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
             <div className="item-list">
               {ingredients.map(item => {
-                const prevDateStr = getPreviousDateStr(selectedDate);
-                const prevDayData = dailyWarehouse[prevDateStr] || {};
-                
-                // Lấy số cuối ngày hôm trước làm đầu ngày hôm nay nếu hôm nay chưa có dữ liệu
-                const prevEndAmount = prevDayData[item.id] 
-                  ? Math.max(0, (Number(prevDayData[item.id].startAmount) || 0) - (Number(prevDayData[item.id].usedAmount) || 0))
-                  : (item.baseStock || 0);
-
                 const dayData = currentDayData[item.id] || {};
-                const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : prevEndAmount;
+                
+                // Lấy giá trị đầu ngày: Nếu đã có trong state thì dùng, không thì tự động lấy cuối ngày hôm trước đắp sang
+                const start = dayData.startAmount !== undefined 
+                  ? Number(dayData.startAmount) 
+                  : getInheritedStartAmount(item.id, selectedDate);
+                  
                 const used = Number(dayData.usedAmount) || 0;
                 const end = start - used;
 
