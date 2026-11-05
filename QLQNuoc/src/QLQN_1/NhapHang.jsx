@@ -2,25 +2,23 @@ import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 
 export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) {
-  // Quản lý lịch sử các phiên đã chốt
   const [restockHistory, setRestockHistory] = useState(() => {
     const saved = localStorage.getItem('coffee_restock_history');
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Mốc ngày bắt đầu chu kỳ (mặc định là ngày đầu tiên hoặc ngày được lưu)
   const [cycleStartDate, setCycleStartDate] = useState(() => {
-    return localStorage.getItem('coffee_cycle_start_date') || '2026-11-05';
+    return localStorage.getItem('coffee_cycle_start_date') || selectedDate;
   });
 
   const [selectedHistoryId, setSelectedHistoryId] = useState('');
 
-  // 🌟 Tính tổng tiêu thụ từ `cycleStartDate` đến `selectedDate` (ngày đang chọn trên kho/POS)
+  // 🌟 Tính tổng lượng tiêu thụ cộng dồn từ `cycleStartDate` đến `selectedDate`
   const getCurrentCycleData = () => {
     const consumptionPerIng = {};
 
     Object.entries(dailyWarehouse).forEach(([dateStr, dayData]) => {
-      // Chỉ lấy dữ liệu nằm trong khoảng từ ngày bắt đầu chu kỳ đến ngày đang chọn
+      // Chỉ lấy dữ liệu các ngày nằm trong khoảng từ ngày bắt đầu chu kỳ đến ngày hiện tại
       if (dateStr >= cycleStartDate && dateStr <= selectedDate) {
         Object.entries(dayData || {}).forEach(([ingId, data]) => {
           const used = Number(data.usedAmount) || 0;
@@ -32,7 +30,14 @@ export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) 
     return ingredients.map(item => {
       const totalUsedInCycle = consumptionPerIng[item.id] || 0;
       const projectedNeed = Math.ceil(totalUsedInCycle * 1.1); // Dự trù tăng 10%
-      const currentStock = Number(item.baseStock) || 0;
+      
+      // Lấy tồn kho cuối cùng của ngày đang chọn (hoặc baseStock)
+      const dayData = dailyWarehouse[selectedDate] || {};
+      const currentDayIng = dayData[item.id];
+      const currentStock = currentDayIng 
+        ? Math.max(0, (Number(currentDayIng.startAmount) || 0) - (Number(currentDayIng.usedAmount) || 0))
+        : (Number(item.baseStock) || 0);
+
       const suggestedBuy = Math.max(0, projectedNeed - currentStock);
 
       return {
@@ -54,7 +59,7 @@ export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) 
     ? `Lịch Sử Gợi Ý Kỳ: ${restockHistory.find(h => h.id === selectedHistoryId)?.title || ''}`
     : `Gợi Ý Nhập Hàng (Chu kỳ từ ${cycleStartDate} đến ${selectedDate})`;
 
-  // 🌟 Hàm chốt kỳ: Lưu lại, đồng thời dời mốc bắt đầu chu kỳ mới bằng đúng ngày đang chọn (`selectedDate`)
+  // Hàm chốt kỳ: Lưu lịch sử, dời mốc bắt đầu chu kỳ mới bằng ngày hiện tại
   const handleSaveRestockSession = () => {
     const newSessionId = Date.now().toString();
 
@@ -68,15 +73,14 @@ export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) 
     setRestockHistory(updatedHistory);
     localStorage.setItem('coffee_restock_history', JSON.stringify(updatedHistory));
 
-    // Đặt mốc chu kỳ mới bắt đầu từ ngày hiện tại đang chọn
+    // Đặt mốc chu kỳ mới bắt đầu từ ngày hiện tại
     setCycleStartDate(selectedDate);
     localStorage.setItem('coffee_cycle_start_date', selectedDate);
 
     setSelectedHistoryId('');
-    alert(`Đã chốt kỳ từ ${cycleStartDate} đến ${selectedDate} thành công! Bảng gợi ý đã reset về 0.`);
+    alert(`Đã chốt kỳ từ ${cycleStartDate} đến ${selectedDate} thành công! Bảng gợi ý đã reset về chu kỳ mới.`);
   };
 
-  // Xóa phiên lịch sử
   const handleDeleteHistory = (id) => {
     if (window.confirm("Mày có chắc muốn xóa phiên lịch sử này không?")) {
       const updatedHistory = restockHistory.filter(h => h.id !== id);
@@ -93,7 +97,7 @@ export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) 
     const dataToExport = currentActiveData.map(item => ({
       "Tên Nguyên Liệu": item.name,
       "Tiêu Thụ Trong Kỳ": item.totalUsedLastWeek,
-      "Dự Kiến Tuần Tới (+10%)": item.projectedNeed,
+      "Dự Kiến (+10%)": item.projectedNeed,
       "Tồn Kho Hiện Tại": item.currentStock,
       "Cần Nhập Thêm": item.suggestedBuy
     }));
@@ -130,13 +134,13 @@ export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) 
             onClick={handleSaveRestockSession}
             style={{ whiteSpace: 'nowrap' }}
           >
-            💾 Chốt Kỳ & Làm Mới Bảng Về 0
+            💾 Chốt Kỳ & Làm Mới Về 0
           </button>
         </div>
 
         {restockHistory.length > 0 && (
           <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <span style={{ fontSize: '12px', color: '#b0a494' }}>Danh sách các kỳ đã chốt (Bấm để xem hoặc xóa):</span>
+            <span style={{ fontSize: '12px', color: '#b0a494' }}>Danh sách các kỳ đã chốt:</span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {restockHistory.map(hist => (
                 <div 
@@ -161,7 +165,6 @@ export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) 
                     className="btn-danger" 
                     style={{ padding: '2px 6px', fontSize: '11px', background: '#9b2226', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer' }} 
                     onClick={() => handleDeleteHistory(hist.id)}
-                    title="Xóa phiên này"
                   >
                     Xóa
                   </button>
@@ -174,7 +177,7 @@ export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) 
 
       <h3 className="section-heading" style={{ color: '#ffb703' }}>{activeTitle}</h3>
       <p style={{ color: '#b0a494', fontSize: '13px', marginBottom: '15px' }}>
-        {selectedHistoryId ? 'Đang xem lại bản tổng kết lịch sử của kỳ trước.' : `Đang tính tổng tiêu thụ từ ngày bắt đầu chu kỳ (${cycleStartDate}) đến ngày hiện tại (${selectedDate}). Khi bấm chốt, dữ liệu lưu vào lịch sử và bảng reset về 0.`}
+        {selectedHistoryId ? 'Đang xem lại bản tổng kết lịch sử.' : `Đang tính tổng tiêu thụ từ ngày ${cycleStartDate} đến ${selectedDate}. Khi bấm chốt, hệ thống lưu lịch sử và dời mốc chu kỳ mới bắt đầu từ ngày hiện tại.`}
       </p>
 
       {ingredients.length === 0 ? (
@@ -185,7 +188,7 @@ export default function NhapHang({ ingredients, dailyWarehouse, selectedDate }) 
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', padding: '10px 14px', background: '#221915', borderRadius: '8px', fontWeight: 'bold', color: '#e6ccb2', marginBottom: '10px', border: '1px solid #4a3a31' }}>
               <div>Tên Nguyên Liệu</div>
               <div style={{ textAlign: 'center' }}>Tiêu Thụ (Trong Kỳ)</div>
-              <div style={{ textAlign: 'center' }}>Dự Kiến Tuần Tới</div>
+              <div style={{ textAlign: 'center' }}>Dự Kiến</div>
               <div style={{ textAlign: 'center' }}>Tồn Kho</div>
               <div style={{ textAlign: 'center', color: '#ffb703' }}>Gợi Ý Cần Nhập</div>
             </div>
