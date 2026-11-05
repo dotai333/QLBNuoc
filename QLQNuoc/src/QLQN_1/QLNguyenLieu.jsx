@@ -5,10 +5,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
   const [newIngName, setNewIngName] = useState('');
   const [newBaseStock, setNewBaseStock] = useState('');
 
-  // Lấy dữ liệu kho của ngày đang chọn
   const currentDayData = dailyWarehouse[selectedDate] || {};
 
-  // Hàm cập nhật số liệu của một nguyên liệu trong ngày đang chọn
   const handleUpdateDayData = (ingId, field, value) => {
     const updatedDay = {
       ...currentDayData,
@@ -20,7 +18,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     saveDailyWarehouseToServer(selectedDate, updatedDay);
   };
 
-  // Thêm nguyên liệu mới vào danh sách chung
   const handleAddIngredient = async (e) => {
     e.preventDefault();
     if (!newIngName.trim()) return;
@@ -42,16 +39,11 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     }
   };
 
-  // 🌟 Hàm xóa toàn bộ dữ liệu của ngày đang chọn
+  // Nút xóa toàn bộ dữ liệu trong ngày
   const handleDeleteDayData = async () => {
     if (window.confirm(`Mày có chắc muốn xóa sạch toàn bộ dữ liệu kho của ngày ${selectedDate} không?`)) {
-      const updatedWarehouse = { ...dailyWarehouse };
-      delete updatedWarehouse[selectedDate];
-      
-      // Lưu lại state và local storage
       saveDailyWarehouseToServer(selectedDate, {});
 
-      // Xóa trên server (nếu có API soLieu)
       try {
         const checkRes = await axios.get(`https://qlbnuoc.onrender.com/soLieu?id=${selectedDate}`);
         if (checkRes.data && checkRes.data.length > 0) {
@@ -70,10 +62,10 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     <div className="coffee-card">
       <h2 className="card-title">📦 Quản Lý Kho Nguyên Liệu</h2>
 
-      {/* Phần chọn ngày kiểm kho */}
+      {/* Phần chọn ngày và nút lưu kho chung */}
       <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
         <label className="form-label" style={{ color: '#e6ccb2', marginBottom: '8px', display: 'block' }}>📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <input 
             type="date" 
             className="coffee-input"
@@ -81,6 +73,13 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
             onChange={(e) => setSelectedDate(e.target.value)}
             style={{ flex: 1 }}
           />
+          <button 
+            className="btn-primary" 
+            onClick={() => alert(`Đã cập nhật kho ngày ${selectedDate}`)}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            💾 Lưu / Cập Nhật Kho
+          </button>
         </div>
       </div>
 
@@ -108,7 +107,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         </form>
       </div>
 
-      {/* Tiêu đề bảng và Nút xóa toàn bộ dữ liệu trong ngày */}
+      {/* Tiêu đề bảng và nút xóa toàn bộ ngày */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
         <h3 className="section-heading" style={{ color: '#ffb703', margin: 0 }}>
           📋 Bảng Cân Đối Kho Ngày: {selectedDate}
@@ -127,7 +126,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
             fontSize: '13px'
           }}
         >
-          🗑️ Xóa Dữ Liệu Ngày Này
+          🗑️ Xóa Toàn Bộ Dữ Liệu Ngày Này
         </button>
       </div>
 
