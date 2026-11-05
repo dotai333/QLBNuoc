@@ -1,250 +1,179 @@
-import React, { useState, useEffect } from 'react';
-import * as XLSX from 'xlsx';
+import React, { useState } from 'react';
+import axios from 'axios';
 
 export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehouse, saveDailyWarehouseToServer, selectedDate, setSelectedDate }) {
   const [newIngName, setNewIngName] = useState('');
-  const [newIngBase, setNewIngBase] = useState('');
-  const [editingId, setEditingId] = useState(null);
-  const [editBase, setEditBase] = useState('');
+  const [newBaseStock, setNewBaseStock] = useState('');
 
-  const getPreviousDateStr = (dateStr) => {
-    const d = new Date(dateStr);
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
-  };
-
-  useEffect(() => {
-    if (selectedDate && !dailyWarehouse[selectedDate]) {
-      const prevDateStr = getPreviousDateStr(selectedDate);
-      const prevDayData = dailyWarehouse[prevDateStr];
-      
-      const newDayData = {};
-      if (prevDayData) {
-        ingredients.forEach(item => {
-          const prevItemData = prevDayData[item.id] || { startAmount: 0, usedAmount: 0 };
-          const prevStart = Number(prevItemData.startAmount) || 0;
-          const prevUsed = Number(prevItemData.usedAmount) || 0;
-          const prevEnd = prevStart - prevUsed;
-
-          newDayData[item.id] = {
-            startAmount: prevEnd,
-            usedAmount: ''
-          };
-        });
-      } else {
-        ingredients.forEach(item => {
-          newDayData[item.id] = {
-            startAmount: 0,
-            usedAmount: ''
-          };
-        });
-      }
-      saveDailyWarehouseToServer(selectedDate, newDayData);
-    }
-  }, [selectedDate, dailyWarehouse, ingredients]);
-
+  // Lấy dữ liệu kho của ngày đang chọn
   const currentDayData = dailyWarehouse[selectedDate] || {};
 
-  const handleAmountChange = (ingId, field, value) => {
-    const currentData = currentDayData[ingId] || { startAmount: '', usedAmount: '' };
-    const updatedIngData = {
-      ...currentData,
-      [field]: value === '' ? '' : Number(value)
-    };
-
-    const updatedDayData = {
+  // Hàm cập nhật số liệu của một nguyên liệu trong ngày đang chọn
+  const handleUpdateDayData = (ingId, field, value) => {
+    const updatedDay = {
       ...currentDayData,
-      [ingId]: updatedIngData
+      [ingId]: {
+        ...(currentDayData[ingId] || { startAmount: 0, usedAmount: 0, endAmount: 0 }),
+        [field]: Number(value) || 0
+      }
     };
-
-    saveDailyWarehouseToServer(selectedDate, updatedDayData);
+    saveDailyWarehouseToServer(selectedDate, updatedDay);
   };
 
-  const handleSaveWarehouseManual = async () => {
-    await saveDailyWarehouseToServer(selectedDate, currentDayData);
-    alert(`Đã lưu số liệu kho ngày ${selectedDate} thành công!`);
-  };
-
-  const handleAddIngredient = (e) => {
+  // Thêm nguyên liệu mới vào danh sách chung
+  const handleAddIngredient = async (e) => {
     e.preventDefault();
     if (!newIngName.trim()) return;
 
-    const newObj = {
-      id: Date.now().toString(),
+    const newItem = {
       name: newIngName.trim(),
-      baseStock: Number(newIngBase) || 0
+      baseStock: Number(newBaseStock) || 0
     };
 
-    const updated = [...ingredients, newObj];
-    setIngredients(updated);
-    setNewIngName('');
-    setNewIngBase('');
-  };
-
-  const handleDeleteIngredient = (id) => {
-    if (window.confirm("Mày có chắc muốn xóa nguyên liệu này không?")) {
-      const updated = ingredients.filter(item => item.id !== id);
-      setIngredients(updated);
+    try {
+      const res = await axios.post("https://qlbnuoc.onrender.com/nguyenLieu", newItem);
+      setIngredients(prev => [...prev, res.data]);
+      setNewIngName('');
+      setNewBaseStock('');
+      alert("Thêm nguyên liệu thành công!");
+    } catch (err) {
+      console.log("Lỗi thêm nguyên liệu:", err);
+      alert("Lỗi khi thêm nguyên liệu!");
     }
   };
 
-  const handleSaveEdit = (id) => {
-    const updated = ingredients.map(item => {
-      if (item.id === id) {
-        return { ...item, baseStock: Number(editBase) || 0 };
+  // 🌟 Hàm xóa toàn bộ dữ liệu của ngày đang chọn
+  const handleDeleteDayData = async () => {
+    if (window.confirm(`Mày có chắc muốn xóa sạch toàn bộ dữ liệu kho của ngày ${selectedDate} không?`)) {
+      const updatedWarehouse = { ...dailyWarehouse };
+      delete updatedWarehouse[selectedDate];
+      
+      // Lưu lại state và local storage
+      saveDailyWarehouseToServer(selectedDate, {});
+
+      // Xóa trên server (nếu có API soLieu)
+      try {
+        const checkRes = await axios.get(`https://qlbnuoc.onrender.com/soLieu?id=${selectedDate}`);
+        if (checkRes.data && checkRes.data.length > 0) {
+          const dbId = checkRes.data[0].id;
+          await axios.delete(`https://qlbnuoc.onrender.com/soLieu/${dbId}`);
+        }
+      } catch (error) {
+        console.log("Lỗi xóa dữ liệu ngày trên server:", error);
       }
-      return item;
-    });
-    setIngredients(updated);
-    setEditingId(null);
-  };
 
-  const handleMoveItem = (index, direction) => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= ingredients.length) return;
-
-    const updated = [...ingredients];
-    const temp = updated[index];
-    updated[index] = updated[newIndex];
-    updated[newIndex] = temp;
-
-    setIngredients(updated);
-  };
-
-  const handleExportExcel = () => {
-    const dataToExport = ingredients.map((item) => {
-      const itemData = currentDayData[item.id] || { startAmount: 0, usedAmount: 0 };
-      const start = Number(itemData.startAmount) || 0;
-      const used = Number(itemData.usedAmount) || 0;
-      const end = start - used;
-
-      return {
-        "Tên Nguyên Liệu": item.name,
-        "Đầu Ngày": start,
-        "Đã Dùng (POS)": used,
-        "Cuối Ngày": end,
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Bao Cao Kho");
-    XLSX.writeFile(workbook, `Bao_Cao_Kho_${selectedDate}.xlsx`);
+      alert(`Đã xóa sạch dữ liệu ngày ${selectedDate}!`);
+    }
   };
 
   return (
     <div className="coffee-card">
       <h2 className="card-title">📦 Quản Lý Kho Nguyên Liệu</h2>
 
-      <div className="coffee-form">
-        <label className="form-label">📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+      {/* Phần chọn ngày kiểm kho */}
+      <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
+        <label className="form-label" style={{ color: '#e6ccb2', marginBottom: '8px', display: 'block' }}>📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <input 
             type="date" 
             className="coffee-input"
-            style={{ flex: 1 }}
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
+            style={{ flex: 1 }}
           />
-          <button className="btn-primary" onClick={handleSaveWarehouseManual} style={{ whiteSpace: 'nowrap' }}>
-            💾 Lưu / Cập Nhật Kho
-          </button>
         </div>
       </div>
 
-      <form onSubmit={handleAddIngredient} className="coffee-form">
-        <label className="form-label">➕ Thêm Nguyên Liệu Mới</label>
-        <div className="form-row">
+      {/* Form thêm nguyên liệu mới */}
+      <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
+        <h3 style={{ color: '#ffb703', fontSize: '15px', marginBottom: '10px' }}>➕ Thêm Nguyên Liệu Mới</h3>
+        <form onSubmit={handleAddIngredient} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <input 
             type="text" 
-            placeholder="Tên nguyên liệu (VD: Sữa tươi)"
-            className="coffee-input input-flex-2"
+            placeholder="Tên nguyên liệu (VD: Sữa tươi)" 
+            className="coffee-input"
             value={newIngName}
             onChange={(e) => setNewIngName(e.target.value)}
+            style={{ flex: 2 }}
           />
           <input 
             type="number" 
-            placeholder="Tồn kho cơ bản"
-            className="coffee-input input-flex-1"
-            value={newIngBase}
-            onChange={(e) => setNewIngBase(e.target.value)}
+            placeholder="Tồn kho cơ bản" 
+            className="coffee-input"
+            value={newBaseStock}
+            onChange={(e) => setNewBaseStock(e.target.value)}
+            style={{ flex: 1 }}
           />
-          <button type="submit" className="btn-primary">Thêm</button>
-        </div>
-      </form>
+          <button type="submit" className="btn-primary" style={{ whiteSpace: 'nowrap' }}>Thêm</button>
+        </form>
+      </div>
 
-      <h3 className="section-heading">📋 Bảng Cân Đối Kho Ngày: <span style={{ color: '#e6ccb2' }}>{selectedDate}</span></h3>
+      {/* Tiêu đề bảng và Nút xóa toàn bộ dữ liệu trong ngày */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+        <h3 className="section-heading" style={{ color: '#ffb703', margin: 0 }}>
+          📋 Bảng Cân Đối Kho Ngày: {selectedDate}
+        </h3>
+        
+        <button 
+          onClick={handleDeleteDayData}
+          style={{ 
+            background: '#9b2226', 
+            color: '#fff', 
+            border: 'none', 
+            padding: '8px 14px', 
+            borderRadius: '6px', 
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '13px'
+          }}
+        >
+          🗑️ Xóa Dữ Liệu Ngày Này
+        </button>
+      </div>
 
       {ingredients.length === 0 ? (
         <p className="empty-text">Chưa có nguyên liệu nào trong kho.</p>
       ) : (
         <div className="table-responsive">
-          <div style={{ minWidth: '600px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', padding: '10px 14px', background: '#221915', borderRadius: '8px', fontWeight: 'bold', color: '#e6ccb2', marginBottom: '10px', border: '1px solid #4a3a31' }}>
+          <div style={{ minWidth: '700px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1.2fr 1.2fr 1.2fr', gap: '10px', padding: '10px 14px', background: '#221915', borderRadius: '8px', fontWeight: 'bold', color: '#e6ccb2', marginBottom: '10px', border: '1px solid #4a3a31' }}>
               <div>Tên Nguyên Liệu</div>
               <div style={{ textAlign: 'center' }}>Đầu Ngày</div>
               <div style={{ textAlign: 'center' }}>Đã Dùng (POS)</div>
               <div style={{ textAlign: 'center' }}>Cuối Ngày</div>
-              <div style={{ textAlign: 'right' }}>Thao Tác</div>
             </div>
 
             <div className="item-list">
-              {ingredients.map((item, index) => {
-                const itemData = currentDayData[item.id] || { startAmount: '', usedAmount: '' };
-                const start = itemData.startAmount !== '' ? Number(itemData.startAmount) : 0;
-                const used = itemData.usedAmount !== '' ? Number(itemData.usedAmount) : 0;
+              {ingredients.map(item => {
+                const dayData = currentDayData[item.id] || { startAmount: item.baseStock || 0, usedAmount: 0 };
+                const start = Number(dayData.startAmount) || 0;
+                const used = Number(dayData.usedAmount) || 0;
                 const end = start - used;
 
                 return (
-                  <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', alignItems: 'center', background: '#221915', border: '1px solid #4a3a31', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px' }}>
+                  <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '2.5fr 1.2fr 1.2fr 1.2fr', gap: '10px', alignItems: 'center', background: '#221915', border: '1px solid #4a3a31', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px' }}>
+                    <div style={{ color: '#f7f3ef', fontWeight: '600' }}>{item.name}</div>
                     
-                    <div>
-                      <span className="item-title-bold" style={{ margin: 0, color: '#f7f3ef' }}>{item.name}</span>
-                    </div>
-
+                    {/* Đầu ngày */}
                     <div style={{ textAlign: 'center' }}>
                       <input 
                         type="number"
                         className="coffee-input"
-                        style={{ textAlign: 'center', padding: '6px' }}
-                        value={itemData.startAmount !== undefined ? itemData.startAmount : ''}
-                        onChange={(e) => handleAmountChange(item.id, 'startAmount', e.target.value)}
-                        placeholder="0"
+                        style={{ width: '90px', textAlign: 'center', padding: '6px' }}
+                        value={start}
+                        onChange={(e) => handleUpdateDayData(item.id, 'startAmount', e.target.value)}
                       />
                     </div>
 
-                    <div style={{ textAlign: 'center' }}>
-                      <input 
-                        type="number"
-                        className="coffee-input"
-                        style={{ textAlign: 'center', padding: '6px' }}
-                        value={itemData.usedAmount !== undefined ? itemData.usedAmount : ''}
-                        onChange={(e) => handleAmountChange(item.id, 'usedAmount', e.target.value)}
-                        placeholder="0"
-                      />
+                    {/* Đã dùng POS */}
+                    <div style={{ textAlign: 'center', color: '#ffb703', fontWeight: 'bold' }}>
+                      {used}
                     </div>
 
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#52b788' }}>
+                    {/* Cuối ngày */}
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: end < 0 ? '#ff4d4d' : '#52b788', fontSize: '15px' }}>
                       {end}
                     </div>
-
-                    <div style={{ textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                      <button className="btn-cyan" style={{ padding: '4px 6px', fontSize: '11px' }} onClick={() => handleMoveItem(index, 'up')} title="Đưa lên trên">⬆</button>
-                      <button className="btn-cyan" style={{ padding: '4px 6px', fontSize: '11px' }} onClick={() => handleMoveItem(index, 'down')} title="Đưa xuống dưới">⬇</button>
-
-                      {editingId === item.id ? (
-                        <>
-                          <button className="btn-cyan" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleSaveEdit(item.id)}>Lưu</button>
-                          <button className="btn-danger" onClick={() => setEditingId(null)}>Hủy</button>
-                        </>
-                      ) : (
-                        <>
-                          <button className="btn-cyan" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => { setEditingId(item.id); setEditBase(item.baseStock); }}>Sửa</button>
-                          <button className="btn-danger" onClick={() => handleDeleteIngredient(item.id)}>Xóa</button>
-                        </>
-                      )}
-                    </div>
-
                   </div>
                 );
               })}
@@ -252,13 +181,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
           </div>
         </div>
       )}
-
-      <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'center' }}>
-        <button className="btn-excel" onClick={handleExportExcel}>
-          📊 Gửi / Tải Báo Cáo Nguyên Liệu (Excel)
-        </button>
-      </div>
-
     </div>
   );
 }
