@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 
@@ -22,30 +22,39 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     return `${y}-${m}-${dayStr}`;
   };
 
-  // 🌟 Hàm tìm thông minh: Tự động tìm lùi về các ngày trước đó để lấy số "Cuối Ngày" gần nhất đắp sang
   const getInheritedStartAmount = (itemId, currentDateStr) => {
     let checkDate = getPreviousDateStr(currentDateStr);
-    
-    // Duyệt ngược tối đa 30 ngày về trước để tìm dữ liệu thực tế đã có của nguyên liệu này
     for (let i = 0; i < 30; i++) {
       const dayData = dailyWarehouse[checkDate];
       if (dayData && dayData[itemId]) {
         const start = Number(dayData[itemId].startAmount) || 0;
         const used = Number(dayData[itemId].usedAmount) || 0;
-        return Math.max(0, start - used); // Trả về số cuối ngày của ngày gần nhất tìm thấy
+        return Math.max(0, start - used);
       }
       checkDate = getPreviousDateStr(checkDate);
     }
-
-    // Nếu ngược về quá khứ không có gì thì lấy tồn kho cơ bản của nguyên liệu
     const ing = ingredients.find(i => i.id === itemId);
     return Number(ing?.baseStock) || 0;
   };
 
+  // 🌟 Tự động lưu ngầm dữ liệu kế thừa vào state/server khi chuyển sang ngày mới chưa có dữ liệu
+  useEffect(() => {
+    if (!dailyWarehouse[selectedDate] && ingredients.length > 0) {
+      const autoDayData = {};
+      ingredients.forEach(item => {
+        const inheritedStart = getInheritedStartAmount(item.id, selectedDate);
+        autoDayData[item.id] = {
+          startAmount: inheritedStart,
+          usedAmount: 0
+        };
+      });
+      saveDailyWarehouseToServer(selectedDate, autoDayData);
+    }
+  }, [selectedDate, ingredients]);
+
   const currentDayData = dailyWarehouse[selectedDate] || {};
 
   const handleUpdateDayData = (ingId, field, value) => {
-    // Nếu người dùng bắt đầu chỉnh sửa, tự động lấy giá trị kế thừa làm gốc nếu chưa có
     const defaultStart = currentDayData[ingId]?.startAmount !== undefined 
       ? currentDayData[ingId].startAmount 
       : getInheritedStartAmount(ingId, selectedDate);
@@ -63,7 +72,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
   };
 
   const handleSaveKho = () => {
-    // Khi bấm lưu, gom toàn bộ dữ liệu đang hiển thị (bao gồm cả dữ liệu tự động kế thừa) lưu thẳng vào state & server
     const fullDayData = {};
     ingredients.forEach(item => {
       const defaultStart = currentDayData[item.id]?.startAmount !== undefined 
@@ -144,7 +152,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     <div className="coffee-card">
       <h2 className="card-title">📦 Quản Lý Kho Nguyên Liệu</h2>
 
-      {/* Phần chọn ngày, nút Lưu và Xuất Excel */}
       <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
         <label className="form-label" style={{ color: '#e6ccb2', marginBottom: '8px', display: 'block' }}>📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -164,7 +171,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         </div>
       </div>
 
-      {/* Form thêm nguyên liệu mới */}
       <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
         <h3 style={{ color: '#ffb703', fontSize: '15px', marginBottom: '10px' }}>➕ Thêm Nguyên Liệu Mới</h3>
         <form onSubmit={handleAddIngredient} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -188,7 +194,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         </form>
       </div>
 
-      {/* Tiêu đề bảng và nút xóa toàn bộ ngày */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
         <h3 className="section-heading" style={{ color: '#ffb703', margin: 0 }}>
           📋 Bảng Cân Đối Kho Ngày: {selectedDate}
@@ -226,8 +231,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
             <div className="item-list">
               {ingredients.map(item => {
                 const dayData = currentDayData[item.id] || {};
-                
-                // Lấy giá trị đầu ngày: Nếu đã có trong state thì dùng, không thì tự động lấy cuối ngày hôm trước đắp sang
                 const start = dayData.startAmount !== undefined 
                   ? Number(dayData.startAmount) 
                   : getInheritedStartAmount(item.id, selectedDate);
