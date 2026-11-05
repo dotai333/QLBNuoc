@@ -60,7 +60,7 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
 
     const newSession = {
       id: newSessionId,
-      title: `${cycleStartDate} đến ${todayStr}`,
+      title: `Đến ngày ${todayStr}`,
       items: getCurrentCycleData()
     };
 
@@ -68,11 +68,16 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
     setRestockHistory(updatedHistory);
     localStorage.setItem('coffee_restock_history', JSON.stringify(updatedHistory));
 
-    setCycleStartDate(todayStr);
-    localStorage.setItem('coffee_cycle_start_date', todayStr);
+    // 🌟 Đẩy mốc chu kỳ mới sang NGÀY MAI để hôm nay chốt xong là bảng chính về 0 ngay lập tức
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    setCycleStartDate(tomorrowStr);
+    localStorage.setItem('coffee_cycle_start_date', tomorrowStr);
 
     setSelectedHistoryId('');
-    alert(`Đã chốt kỳ thành công từ ${cycleStartDate} đến ${todayStr}! Bảng gợi ý đã được làm mới về 0.`);
+    alert(`Đã chốt kỳ thành công! Bảng gợi ý đã được làm mới về 0 cho chu kỳ tiếp theo.`);
   };
 
   // 🌟 Hàm xóa một phiên lịch sử cụ thể
