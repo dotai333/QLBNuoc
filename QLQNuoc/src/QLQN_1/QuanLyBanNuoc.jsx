@@ -9,10 +9,23 @@ import * as XLSX from 'xlsx';
 export default function QuanLyQuanNuoc() {
   const [recipes, setRecipes] = useState([]);
   const [ingredients, setIngredients] = useState([]);
-  const [dailyWarehouse, setDailyWarehouse] = useState({});
+  
+  // 🌟 Khởi tạo dailyWarehouse ưu tiên lấy từ localStorage trên máy trước để không bao giờ bị mất khi F5
+  const [dailyWarehouse, setDailyWarehouse] = useState(() => {
+    const savedLocal = localStorage.getItem('coffee_daily_warehouse');
+    if (savedLocal) {
+      try {
+        return JSON.parse(savedLocal);
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  });
+
   const [activeTab, setActiveTab] = useState('pos');
 
-  // Load tất cả dữ liệu từ Render server khi mở web
+  // Load dữ liệu từ Render server khi mở web
   useEffect(() => {
     axios.get("https://qlbnuoc.onrender.com/congThuc")
       .then(res => setRecipes(res.data))
@@ -22,21 +35,32 @@ export default function QuanLyQuanNuoc() {
       .then(res => setIngredients(res.data))
       .catch(err => console.log("Lỗi tải nguyên liệu:", err));
 
+    // Lấy thêm số liệu kho từ server (nếu có) và gộp vào
     axios.get("https://qlbnuoc.onrender.com/soLieu")
       .then(res => {
-        const warehouseObj = {};
-        res.data.forEach(item => {
-          warehouseObj[item.id] = item.data;
-        });
-        setDailyWarehouse(warehouseObj);
+        if (res.data && res.data.length > 0) {
+          const warehouseObj = {};
+          res.data.forEach(item => {
+            warehouseObj[item.id] = item.data;
+          });
+          // Gộp dữ liệu từ server với localStorage
+          setDailyWarehouse(prev => {
+            const merged = { ...warehouseObj, ...prev };
+            localStorage.setItem('coffee_daily_warehouse', JSON.stringify(merged));
+            return merged;
+          });
+        }
       })
-      .catch(err => console.log("Lỗi tải số liệu kho:", err));
+      .catch(err => console.log("Lỗi tải số liệu kho từ server:", err));
   }, []);
 
-  // Hàm lưu dữ liệu ngày xuống Render server an toàn
+  // 🌟 Hàm lưu dữ liệu kho: Lưu ngay vào LocalStorage và đồng thời đẩy ngầm lên Render server
   const saveDailyWarehouseToServer = async (dateStr, dayData) => {
     const updatedWarehouse = { ...dailyWarehouse, [dateStr]: dayData };
     setDailyWarehouse(updatedWarehouse);
+    
+    // Lưu ngay vào LocalStorage của trình duyệt (Đảm bảo F5 không bao giờ mất)
+    localStorage.setItem('coffee_daily_warehouse', JSON.stringify(updatedWarehouse));
 
     try {
       const checkRes = await axios.get(`https://qlbnuoc.onrender.com/soLieu?id=${dateStr}`);
@@ -48,28 +72,9 @@ export default function QuanLyQuanNuoc() {
         await axios.post(`https://qlbnuoc.onrender.com/soLieu`, { id: dateStr, data: dayData });
       }
     } catch (error) {
-      console.log("Lỗi đồng bộ soLieu lên Render:", error);
+      console.log("Lưu server Render chạy ngầm (không ảnh hưởng dữ liệu local):", error);
     }
   };
-
-  // 🌟 ĐÃ SỬA: Đồng bộ danh sách nguyên liệu lên Render server để không bị mất khi F5
-  const updateIngredientsOnServer = async (newIngredients) => {
-    setIngredients(newIngredients);
-    try {
-      // Ghi đè hoặc cập nhật danh sách nguyên liệu lên server
-      // (Giả định json-server hỗ trợ lưu mảng hoặc lưu từng item, ở đây ta đẩy toàn bộ qua API nguyenLieu hoặc PUT từng phần tử)
-      // Cách tối ưu với json-server cho bảng nguyenLieu:
-      await axios.put("https://qlbnuoc.onrender.com/nguyenLieu", newIngredients).catch(async () => {
-        // Nếu json-server không hỗ trợ PUT trực tiếp cả mảng, ta xóa hết rồi POST lại hoặc lưu theo cấu trúc chuẩn
-        // Tuy nhiên với json-server thông thường, ta có thể dùng vòng lặp đồng bộ từng item hoặc lưu dạng object tổng.
-      });
-    } catch (error) {
-      console.log("Lỗi đồng bộ nguyên liệu:", error);
-    }
-  };
-
-  // Hoặc cách lưu chuẩn xác hơn cho từng nguyên liệu nếu dùng mảng chuẩn của json-server:
-  // Thay vì PUT cả cục, ta viết hàm riêng cho thêm/sửa/xóa nguyên liệu trong QLNguyenLieu.
 
   return (
     <div className="app-container">
