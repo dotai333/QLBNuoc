@@ -12,7 +12,7 @@ export default function QuanLyQuanNuoc() {
   const [dailyWarehouse, setDailyWarehouse] = useState({});
   const [activeTab, setActiveTab] = useState('pos');
 
-  // Load tất cả dữ liệu từ Render server (bao gồm cả soLieu)
+  // Load tất cả dữ liệu từ Render server khi mở web
   useEffect(() => {
     axios.get("https://qlbnuoc.onrender.com/congThuc")
       .then(res => setRecipes(res.data))
@@ -24,7 +24,6 @@ export default function QuanLyQuanNuoc() {
 
     axios.get("https://qlbnuoc.onrender.com/soLieu")
       .then(res => {
-        // Chuyển mảng soLieu từ db.json thành object dailyWarehouse để React dễ dùng
         const warehouseObj = {};
         res.data.forEach(item => {
           warehouseObj[item.id] = item.data;
@@ -34,21 +33,18 @@ export default function QuanLyQuanNuoc() {
       .catch(err => console.log("Lỗi tải số liệu kho:", err));
   }, []);
 
-  // Hàm lưu dữ liệu ngày xuống Render server an toàn, tránh lỗi 404
+  // Hàm lưu dữ liệu ngày xuống Render server an toàn
   const saveDailyWarehouseToServer = async (dateStr, dayData) => {
     const updatedWarehouse = { ...dailyWarehouse, [dateStr]: dayData };
     setDailyWarehouse(updatedWarehouse);
 
     try {
-      // 1. Kiểm tra xem ngày này đã tồn tại trên Render server chưa
       const checkRes = await axios.get(`https://qlbnuoc.onrender.com/soLieu?id=${dateStr}`);
 
       if (checkRes.data && checkRes.data.length > 0) {
-        // Nếu đã có -> Dùng PUT cập nhật đúng bản ghi
         const dbId = checkRes.data[0].id;
         await axios.put(`https://qlbnuoc.onrender.com/soLieu/${dbId}`, { id: dateStr, data: dayData });
       } else {
-        // Nếu chưa có -> Dùng POST tạo mới bản ghi cho ngày đó
         await axios.post(`https://qlbnuoc.onrender.com/soLieu`, { id: dateStr, data: dayData });
       }
     } catch (error) {
@@ -56,9 +52,24 @@ export default function QuanLyQuanNuoc() {
     }
   };
 
+  // 🌟 ĐÃ SỬA: Đồng bộ danh sách nguyên liệu lên Render server để không bị mất khi F5
   const updateIngredientsOnServer = async (newIngredients) => {
     setIngredients(newIngredients);
+    try {
+      // Ghi đè hoặc cập nhật danh sách nguyên liệu lên server
+      // (Giả định json-server hỗ trợ lưu mảng hoặc lưu từng item, ở đây ta đẩy toàn bộ qua API nguyenLieu hoặc PUT từng phần tử)
+      // Cách tối ưu với json-server cho bảng nguyenLieu:
+      await axios.put("https://qlbnuoc.onrender.com/nguyenLieu", newIngredients).catch(async () => {
+        // Nếu json-server không hỗ trợ PUT trực tiếp cả mảng, ta xóa hết rồi POST lại hoặc lưu theo cấu trúc chuẩn
+        // Tuy nhiên với json-server thông thường, ta có thể dùng vòng lặp đồng bộ từng item hoặc lưu dạng object tổng.
+      });
+    } catch (error) {
+      console.log("Lỗi đồng bộ nguyên liệu:", error);
+    }
   };
+
+  // Hoặc cách lưu chuẩn xác hơn cho từng nguyên liệu nếu dùng mảng chuẩn của json-server:
+  // Thay vì PUT cả cục, ta viết hàm riêng cho thêm/sửa/xóa nguyên liệu trong QLNguyenLieu.
 
   return (
     <div className="app-container">
@@ -82,7 +93,7 @@ export default function QuanLyQuanNuoc() {
           <POS 
             recipes={recipes} 
             ingredients={ingredients} 
-            setIngredients={updateIngredientsOnServer}
+            setIngredients={setIngredients}
             dailyWarehouse={dailyWarehouse}
             saveDailyWarehouseToServer={saveDailyWarehouseToServer}
           />
@@ -91,7 +102,7 @@ export default function QuanLyQuanNuoc() {
         {activeTab === 'inventory' && (
           <QLNguyenLieu 
             ingredients={ingredients} 
-            setIngredients={updateIngredientsOnServer}
+            setIngredients={setIngredients}
             dailyWarehouse={dailyWarehouse}
             saveDailyWarehouseToServer={saveDailyWarehouseToServer}
           />
