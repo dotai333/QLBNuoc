@@ -9,7 +9,34 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
   const [editingId, setEditingId] = useState(null);
   const [editBase, setEditBase] = useState('');
 
-  const currentDayData = dailyWarehouse[selectedDate] || {};
+  // Hàm tính ngày hôm trước
+  const getPreviousDateStr = (dateStr) => {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  };
+
+  // 🌟 Tự động lấy số liệu kho ngày hiện tại hoặc kế thừa "Cuối ngày" hôm trước làm "Đầu ngày" hôm nay
+  let currentDayData = dailyWarehouse[selectedDate];
+  if (!currentDayData) {
+    const prevDateStr = getPreviousDateStr(selectedDate);
+    const prevDayData = dailyWarehouse[prevDateStr];
+    
+    currentDayData = {};
+    if (prevDayData) {
+      ingredients.forEach(item => {
+        const prevItemData = prevDayData[item.id] || { startAmount: 0, usedAmount: 0 };
+        const prevStart = Number(prevItemData.startAmount) || 0;
+        const prevUsed = Number(prevItemData.usedAmount) || 0;
+        const prevEnd = prevStart - prevUsed;
+
+        currentDayData[item.id] = {
+          startAmount: prevEnd,
+          usedAmount: ''
+        };
+      });
+    }
+  }
 
   const handleAmountChange = (ingId, field, value) => {
     const currentData = currentDayData[ingId] || { startAmount: '', usedAmount: '' };
@@ -95,9 +122,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Bao Cao Kho");
-
-    const fileName = `Bao_Cao_Kho_${selectedDate}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    XLSX.writeFile(workbook, `Bao_Cao_Kho_${selectedDate}.xlsx`);
   };
 
   return (
@@ -181,7 +206,6 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
                       />
                     </div>
 
-                    {/* Ô nhập Đã Dùng (POS) - Có thể tùy ý sửa, xóa hoặc nhập số mới */}
                     <div style={{ textAlign: 'center' }}>
                       <input 
                         type="number"
