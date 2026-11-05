@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 
 export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehouse, saveDailyWarehouseToServer, selectedDate, setSelectedDate }) {
   const [newIngName, setNewIngName] = useState('');
@@ -24,20 +25,44 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
   };
 
   const handleUpdateDayData = (ingId, field, value) => {
-    const prevDateStr = getPreviousDateStr(selectedDate);
-    const prevDayData = dailyWarehouse[prevDateStr] || {};
-    const prevEndAmount = prevDayData[ingId] ? (Number(prevDayData[ingId].startAmount || 0) - Number(prevDayData[ingId].usedAmount || 0)) : (ingredients.find(i => i.id === ingId)?.baseStock || 0);
-
-    const currentItemData = currentDayData[ingId] || { startAmount: prevEndAmount, usedAmount: 0 };
-
     const updatedDay = {
       ...currentDayData,
       [ingId]: {
-        ...currentItemData,
+        ...(currentDayData[ingId] || { startAmount: 0, usedAmount: 0 }),
         [field]: Number(value) || 0
       }
     };
     saveDailyWarehouseToServer(selectedDate, updatedDay);
+  };
+
+  const handleSaveKho = () => {
+    saveDailyWarehouseToServer(selectedDate, currentDayData);
+    alert(`Đã lưu kho ngày ${selectedDate} thành công!`);
+  };
+
+  const handleExportExcel = () => {
+    const dataToExport = ingredients.map(item => {
+      const prevDateStr = getPreviousDateStr(selectedDate);
+      const prevDayData = dailyWarehouse[prevDateStr] || {};
+      const prevEndAmount = prevDayData[item.id] ? (Number(prevDayData[item.id].startAmount || 0) - Number(prevDayData[item.id].usedAmount || 0)) : (item.baseStock || 0);
+
+      const dayData = currentDayData[item.id] || {};
+      const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : prevEndAmount;
+      const used = Number(dayData.usedAmount) || 0;
+      const end = start - used;
+
+      return {
+        "Tên Nguyên Liệu": item.name,
+        "Đầu Ngày": start,
+        "Đã Dùng (POS)": used,
+        "Cuối Ngày": end
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, `Kho_${selectedDate}`);
+    XLSX.writeFile(workbook, `Quan_Ly_Kho_${selectedDate}.xlsx`);
   };
 
   const handleAddIngredient = async (e) => {
@@ -83,6 +108,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     <div className="coffee-card">
       <h2 className="card-title">📦 Quản Lý Kho Nguyên Liệu</h2>
 
+      {/* Phần chọn ngày, nút Lưu và Xuất Excel */}
       <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
         <label className="form-label" style={{ color: '#e6ccb2', marginBottom: '8px', display: 'block' }}>📅 Chọn Ngày Kiểm Kho / Chốt Ca:</label>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -93,9 +119,16 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
             onChange={(e) => setSelectedDate(e.target.value)}
             style={{ flex: 1 }}
           />
+          <button className="btn-primary" onClick={handleSaveKho} style={{ whiteSpace: 'nowrap' }}>
+            💾 Lưu / Cập Nhật Kho
+          </button>
+          <button className="btn-excel" onClick={handleExportExcel} style={{ whiteSpace: 'nowrap' }}>
+            📥 Xuất Excel
+          </button>
         </div>
       </div>
 
+      {/* Form thêm nguyên liệu mới */}
       <div className="coffee-form" style={{ background: '#221915', padding: '15px', borderRadius: '10px', border: '1px solid #4a3a31', marginBottom: '20px' }}>
         <h3 style={{ color: '#ffb703', fontSize: '15px', marginBottom: '10px' }}>➕ Thêm Nguyên Liệu Mới</h3>
         <form onSubmit={handleAddIngredient} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -119,6 +152,7 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
         </form>
       </div>
 
+      {/* Tiêu đề bảng và nút xóa toàn bộ ngày */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
         <h3 className="section-heading" style={{ color: '#ffb703', margin: 0 }}>
           📋 Bảng Cân Đối Kho Ngày: {selectedDate}
