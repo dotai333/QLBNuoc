@@ -2,7 +2,6 @@ import React from 'react';
 import * as XLSX from 'xlsx';
 
 export default function NhapHang({ ingredients, dailyWarehouse }) {
-  // Hàm tính toán gợi ý nhập hàng tuần tới dựa trên 7 ngày gần nhất
   const getWeeklyRestockData = () => {
     const today = new Date();
     const past7DaysKeys = [];
@@ -23,7 +22,7 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
 
     return ingredients.map(item => {
       const totalUsedLastWeek = consumptionPerIng[item.id] || 0;
-      const projectedNeed = Math.ceil(totalUsedLastWeek * 1.1); // Dự trù tăng 10%
+      const projectedNeed = Math.ceil(totalUsedLastWeek * 1.1);
       const currentStock = Number(item.baseStock) || 0;
       const suggestedBuy = Math.max(0, projectedNeed - currentStock);
 
@@ -40,7 +39,6 @@ export default function NhapHang({ ingredients, dailyWarehouse }) {
 
   const restockList = getWeeklyRestockData();
 
-  // Xuất file Excel gợi ý nhập hàng
   const handleExportRestockExcel = () => {
     const dataToExport = restockList.map(item => ({
       "Tên Nguyên Liệu": item.name,

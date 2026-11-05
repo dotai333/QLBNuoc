@@ -1,42 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 
-export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehouse, saveDailyWarehouseToServer }) {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehouse, saveDailyWarehouseToServer, selectedDate, setSelectedDate }) {
   const [newIngName, setNewIngName] = useState('');
   const [newIngBase, setNewIngBase] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editBase, setEditBase] = useState('');
 
-  // Hàm tính ngày hôm trước
   const getPreviousDateStr = (dateStr) => {
     const d = new Date(dateStr);
     d.setDate(d.getDate() - 1);
     return d.toISOString().split('T')[0];
   };
 
-  // 🌟 Tự động lấy số liệu kho ngày hiện tại hoặc kế thừa "Cuối ngày" hôm trước làm "Đầu ngày" hôm nay
-  let currentDayData = dailyWarehouse[selectedDate];
-  if (!currentDayData) {
-    const prevDateStr = getPreviousDateStr(selectedDate);
-    const prevDayData = dailyWarehouse[prevDateStr];
-    
-    currentDayData = {};
-    if (prevDayData) {
-      ingredients.forEach(item => {
-        const prevItemData = prevDayData[item.id] || { startAmount: 0, usedAmount: 0 };
-        const prevStart = Number(prevItemData.startAmount) || 0;
-        const prevUsed = Number(prevItemData.usedAmount) || 0;
-        const prevEnd = prevStart - prevUsed;
+  useEffect(() => {
+    if (selectedDate && !dailyWarehouse[selectedDate]) {
+      const prevDateStr = getPreviousDateStr(selectedDate);
+      const prevDayData = dailyWarehouse[prevDateStr];
+      
+      const newDayData = {};
+      if (prevDayData) {
+        ingredients.forEach(item => {
+          const prevItemData = prevDayData[item.id] || { startAmount: 0, usedAmount: 0 };
+          const prevStart = Number(prevItemData.startAmount) || 0;
+          const prevUsed = Number(prevItemData.usedAmount) || 0;
+          const prevEnd = prevStart - prevUsed;
 
-        currentDayData[item.id] = {
-          startAmount: prevEnd,
-          usedAmount: ''
-        };
-      });
+          newDayData[item.id] = {
+            startAmount: prevEnd,
+            usedAmount: ''
+          };
+        });
+      } else {
+        ingredients.forEach(item => {
+          newDayData[item.id] = {
+            startAmount: 0,
+            usedAmount: ''
+          };
+        });
+      }
+      saveDailyWarehouseToServer(selectedDate, newDayData);
     }
-  }
+  }, [selectedDate, dailyWarehouse, ingredients]);
+
+  const currentDayData = dailyWarehouse[selectedDate] || {};
 
   const handleAmountChange = (ingId, field, value) => {
     const currentData = currentDayData[ingId] || { startAmount: '', usedAmount: '' };

@@ -3,7 +3,7 @@ import axios from 'axios';
 import POS from './POS';
 import QLCongThuc from './QLCongThuc';
 import QLNguyenLieu from './QLNguyenLieu';
-import NhapHang from './NhapHang'; // 🌟 1. Import component NhapHang vào
+import NhapHang from './NhapHang';
 import '../App.css';
 import * as XLSX from 'xlsx';
 
@@ -11,7 +11,9 @@ export default function QuanLyQuanNuoc() {
   const [recipes, setRecipes] = useState([]);
   const [ingredients, setIngredients] = useState([]);
   
-  // 🌟 Khởi tạo dailyWarehouse ưu tiên lấy từ localStorage trên máy trước để không bao giờ bị mất khi F5
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+
   const [dailyWarehouse, setDailyWarehouse] = useState(() => {
     const savedLocal = localStorage.getItem('coffee_daily_warehouse');
     if (savedLocal) {
@@ -26,7 +28,6 @@ export default function QuanLyQuanNuoc() {
 
   const [activeTab, setActiveTab] = useState('pos');
 
-  // Load dữ liệu từ Render server khi mở web
   useEffect(() => {
     axios.get("https://qlbnuoc.onrender.com/congThuc")
       .then(res => setRecipes(res.data))
@@ -36,7 +37,6 @@ export default function QuanLyQuanNuoc() {
       .then(res => setIngredients(res.data))
       .catch(err => console.log("Lỗi tải nguyên liệu:", err));
 
-    // Lấy thêm số liệu kho từ server (nếu có) và gộp vào
     axios.get("https://qlbnuoc.onrender.com/soLieu")
       .then(res => {
         if (res.data && res.data.length > 0) {
@@ -44,7 +44,6 @@ export default function QuanLyQuanNuoc() {
           res.data.forEach(item => {
             warehouseObj[item.id] = item.data;
           });
-          // Gộp dữ liệu từ server với localStorage
           setDailyWarehouse(prev => {
             const merged = { ...warehouseObj, ...prev };
             localStorage.setItem('coffee_daily_warehouse', JSON.stringify(merged));
@@ -55,17 +54,13 @@ export default function QuanLyQuanNuoc() {
       .catch(err => console.log("Lỗi tải số liệu kho từ server:", err));
   }, []);
 
-  // 🌟 Hàm lưu dữ liệu kho: Lưu ngay vào LocalStorage và đồng thời đẩy ngầm lên Render server
   const saveDailyWarehouseToServer = async (dateStr, dayData) => {
     const updatedWarehouse = { ...dailyWarehouse, [dateStr]: dayData };
     setDailyWarehouse(updatedWarehouse);
-    
-    // Lưu ngay vào LocalStorage của trình duyệt (Đảm bảo F5 không bao giờ mất)
     localStorage.setItem('coffee_daily_warehouse', JSON.stringify(updatedWarehouse));
 
     try {
       const checkRes = await axios.get(`https://qlbnuoc.onrender.com/soLieu?id=${dateStr}`);
-
       if (checkRes.data && checkRes.data.length > 0) {
         const dbId = checkRes.data[0].id;
         await axios.put(`https://qlbnuoc.onrender.com/soLieu/${dbId}`, { id: dateStr, data: dayData });
@@ -73,7 +68,7 @@ export default function QuanLyQuanNuoc() {
         await axios.post(`https://qlbnuoc.onrender.com/soLieu`, { id: dateStr, data: dayData });
       }
     } catch (error) {
-      console.log("Lưu server Render chạy ngầm (không ảnh hưởng dữ liệu local):", error);
+      console.log("Lỗi sync server:", error);
     }
   };
 
@@ -88,7 +83,6 @@ export default function QuanLyQuanNuoc() {
           <button onClick={() => setActiveTab('inventory')} className={`nav-btn ${activeTab === 'inventory' ? 'active' : ''}`}>
             📦 Quản Lý Kho
           </button>
-          {/* 🌟 2. Thêm nút chuyển sang trang Gợi Ý Nhập Hàng trên Navbar */}
           <button onClick={() => setActiveTab('restock')} className={`nav-btn ${activeTab === 'restock' ? 'active' : ''}`}>
             📈 Gợi Ý Nhập Hàng
           </button>
@@ -106,6 +100,8 @@ export default function QuanLyQuanNuoc() {
             setIngredients={setIngredients}
             dailyWarehouse={dailyWarehouse}
             saveDailyWarehouseToServer={saveDailyWarehouseToServer}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
           />
         )}
 
@@ -115,10 +111,11 @@ export default function QuanLyQuanNuoc() {
             setIngredients={setIngredients}
             dailyWarehouse={dailyWarehouse}
             saveDailyWarehouseToServer={saveDailyWarehouseToServer}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
           />
         )}
 
-        {/* 🌟 3. Hiển thị component NhapHang khi bấm vào tab restock */}
         {activeTab === 'restock' && (
           <NhapHang 
             ingredients={ingredients} 
