@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 
 export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehouse, saveDailyWarehouseToServer, selectedDate, setSelectedDate }) {
   const [newIngName, setNewIngName] = useState('');
   const [newBaseStock, setNewBaseStock] = useState('');
-
-  const currentDayData = dailyWarehouse[selectedDate] || {};
 
   const getPreviousDateStr = (dateStr) => {
     const parts = dateStr.split('-');
@@ -23,6 +21,33 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
     const dayStr = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${dayStr}`;
   };
+
+  // 🌟 CƠ CHẾ KẾ THỪA TỰ ĐỘNG: Khi chọn ngày mới, tự động lấy cuối ngày hôm trước gán và LƯU THẲNG vào state ngày hiện tại
+  useEffect(() => {
+    if (!dailyWarehouse[selectedDate] && ingredients.length > 0) {
+      const prevDateStr = getPreviousDateStr(selectedDate);
+      const prevDayData = dailyWarehouse[prevDateStr];
+
+      const autoFilledDay = {};
+      ingredients.forEach(item => {
+        let startVal = item.baseStock || 0;
+        if (prevDayData && prevDayData[item.id]) {
+          const pStart = Number(prevDayData[item.id].startAmount) || 0;
+          const pUsed = Number(prevDayData[item.id].usedAmount) || 0;
+          startVal = Math.max(0, pStart - pUsed);
+        }
+        autoFilledDay[item.id] = {
+          startAmount: startVal,
+          usedAmount: 0
+        };
+      });
+
+      // Lưu tự động xuống state & server để ngày tiếp theo có cái mà đọc
+      saveDailyWarehouseToServer(selectedDate, autoFilledDay);
+    }
+  }, [selectedDate, dailyWarehouse, ingredients]);
+
+  const currentDayData = dailyWarehouse[selectedDate] || {};
 
   const handleUpdateDayData = (ingId, field, value) => {
     const updatedDay = {
@@ -42,12 +67,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
   const handleExportExcel = () => {
     const dataToExport = ingredients.map(item => {
-      const prevDateStr = getPreviousDateStr(selectedDate);
-      const prevDayData = dailyWarehouse[prevDateStr] || {};
-      const prevEndAmount = prevDayData[item.id] ? (Number(prevDayData[item.id].startAmount || 0) - Number(prevDayData[item.id].usedAmount || 0)) : (item.baseStock || 0);
-
       const dayData = currentDayData[item.id] || {};
-      const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : prevEndAmount;
+      const start = Number(dayData.startAmount) || 0;
       const used = Number(dayData.usedAmount) || 0;
       const end = start - used;
 
@@ -189,12 +210,8 @@ export default function QLNguyenLieu({ ingredients, setIngredients, dailyWarehou
 
             <div className="item-list">
               {ingredients.map(item => {
-                const prevDateStr = getPreviousDateStr(selectedDate);
-                const prevDayData = dailyWarehouse[prevDateStr] || {};
-                const prevEndAmount = prevDayData[item.id] ? (Number(prevDayData[item.id].startAmount || 0) - Number(prevDayData[item.id].usedAmount || 0)) : (item.baseStock || 0);
-
-                const dayData = currentDayData[item.id] || {};
-                const start = dayData.startAmount !== undefined ? Number(dayData.startAmount) : prevEndAmount;
+                const dayData = currentDayData[item.id] || { startAmount: item.baseStock || 0, usedAmount: 0 };
+                const start = Number(dayData.startAmount) || 0;
                 const used = Number(dayData.usedAmount) || 0;
                 const end = start - used;
 
